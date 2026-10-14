@@ -1,0 +1,18 @@
+Single-colour ink line icon for a board-game harbour sign, in the manner of a
+19th-century nautical chart or copper-plate book engraving.
+
+Style: one uniform dark ink line, near #2E2A22, constant stroke weight, round caps and joins,
+no fill, no hatching, no shading, no gradient. Tidy hand-drawn line, not mechanical vector
+clip art.
+
+Scale: the icon is reproduced at 12-14 px on screen, so keep it to two or three main strokes.
+No texture, no small detail, no second reading.
+
+Composition: square canvas, the mark centred and about 70% of the image width, wide plain
+margin on all sides, no drawn border, no frame, no shadow.
+
+Constraints: no colour, no watercolour, no photorealism, no 3D render, no cartoon or chibi
+style, no thick cartoon outline with white highlight, no gradient, no text, no letters, no
+numbers, no signature, no watermark.
+
+Subject: three rectangular bricks stacked in a small staggered pile, drawn as plain open boxes.

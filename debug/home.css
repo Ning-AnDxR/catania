@@ -1,0 +1,247 @@
+/* 首页：左边一块纸牌匾，右边整幅手写海图 */
+body.home-page {
+  margin: 0;
+  overflow: hidden;
+  background-color: var(--wood-2);
+}
+
+.home-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 30rem;
+  overflow: hidden;
+  background-color: #7e96a0;
+}
+
+.home-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 有插画就铺满盖住矢量海图，没插画就退回矢量 */
+.home-art-img {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 生成的图自带了约 3% 的内框，放大一点把框推到可视区之外 */
+  transform: scale(1.08);
+}
+
+.home-art-img.is-missing {
+  display: none;
+}
+
+.home-plate {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: clamp(1.2rem, 5vw, 4.5rem);
+  transform: translateY(-50%);
+  width: min(25rem, 36vw);
+  min-width: 19rem;
+  padding: 2rem 1.9rem 1.7rem;
+  /* 木质压边：和按钮同一张底板图，切片只取木框那一圈，拉到 7px 就成了一圈细木边
+     （外墨线 / 木色 / 内墨线，四角还带一颗小铆钉）。border-image 不吃圆角，
+     所以 radius 归零，圆角交给底图自己。 */
+  border: 7px solid transparent;
+  border-image-source: url("./assets/btn-plate.webp?v=21");
+  border-image-slice: 17.2%;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  /* 三张纸叠出来的底：羊皮纸纹理砖（256px 平铺）+ 左上暖光 + 右下压深。
+     以前那层 rgba(255,255,255,0.5) 是纯白，这才是面板看着发白的原因，
+     换成偏暖的米白并把强度压到 0.34。 */
+  background-color: #e6dfc8;
+  background-image:
+    radial-gradient(120% 85% at 8% 2%, rgba(250, 246, 236, 0.34), transparent 58%),
+    radial-gradient(90% 70% at 96% 100%, rgba(122, 97, 66, 0.12), transparent 62%),
+    url("./assets/paper-tile.webp?v=2");
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: auto, auto, 256px 256px;
+  box-shadow: 6px 6px 0 rgba(46, 42, 34, 0.32);
+}
+
+/* 小字不加字距、不大写，避免变成那种模板化的眉标 */
+.home-kicker {
+  margin: 0 0 0.5rem;
+  color: var(--ink-2);
+  font-family: var(--f-serif);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+
+.home-plate h1 {
+  margin: 0 0 0.8rem;
+  font-family: var(--f-serif);
+  font-size: clamp(2.3rem, 4.4vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+}
+
+.home-lead {
+  margin: 0 0 1.7rem;
+  color: var(--ink-2);
+  font-size: 0.92rem;
+  line-height: 1.9;
+}
+
+.home-actions {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.home-note {
+  margin: 1.4rem 0 0;
+  padding-top: 1rem;
+  border-top: 1.2px solid rgba(46, 42, 34, 0.28);
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  line-height: 1.8;
+}
+
+/* 窄屏：牌匾贴底，海图留在上面 */
+@media (max-width: 860px) {
+  .home-shell {
+    height: auto;
+    min-height: 100vh;
+    padding-bottom: 2rem;
+  }
+
+  .home-art {
+    position: relative;
+    height: 42vh;
+  }
+
+  .home-plate {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    /* 首页没有引 style.css，也就没有 * { box-sizing: border-box } 那条重置，
+       所以这里必须用 width:auto 让浏览器把内边距和边框算进可用空间 ——
+       写 calc(100% - 2rem) 的话，1.9rem 内边距 + 7px 木边会加在宽度外面，
+       box 比容器宽，margin:auto 失效，右侧被 .home-shell 的 overflow:hidden 裁掉。 */
+    width: auto;
+    min-width: 0;
+    margin: -2rem 1rem 0;
+  }
+}
+
+/* ---------- 首页两张木框牌匾按钮 ----------
+   底板是 assets/btn-plate*.webp（512 见方，木框四边各约占 17%），用 border-image
+   九宫格拉伸；底图四角透明，所以不能有 border-radius，否则圆角外会露出底色。
+
+   切片故意不写 fill：中央由 CSS 自己画，这样才能把底色换成淡色、再压一条
+   btn-art-*.webp 的插画。画带贴右、离框 15px，左缘在素材里已经渐隐，
+   压在上面的是纸色渐变，保证左侧标签始终落在干净纸面上。 */
+.tablet {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  /* 「牌匾按钮」配方（和「确认弃牌」同一套）：
+     浅木纹面 + 细深棕木框 + 柔和外阴影 + 极弱内高光。
+     原来是一圈 15px 的九宫格木框底图，框太厚、压得牌匾像个小盒子；
+     现在框收到 1px，厚度改由 padding 给，四角也不再是底图里的圆角。 */
+  padding: 0.8rem 1.1rem 0.8rem 1.15rem;
+  border: 1px solid rgba(75, 58, 39, 0.5);
+  border-radius: 4px;
+  background-color: #eae2cc;
+  background-image:
+    linear-gradient(90deg, rgba(234, 226, 204, 0.95) 0 22%, rgba(234, 226, 204, 0) 62%),
+    url("./assets/btn-art-online.webp?v=1"),
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.045) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+  background-size: auto, min(56%, 152px) auto, auto, 256px 256px;
+  background-position: 0 0, right 12px center, 0 0, 0 0;
+  box-shadow:
+    0 2px 7px rgba(46, 42, 34, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    transform var(--motion-quick) var(--ease-soft),
+    box-shadow var(--motion-quick) var(--ease-soft),
+    background-color var(--motion-quick) var(--ease-soft);
+}
+
+.tablet:hover {
+  transform: translateY(-2px);
+  background-color: #e3d8bd;
+  box-shadow:
+    0 5px 13px rgba(46, 42, 34, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.tablet:active {
+  transform: translateY(1px);
+  background-color: #ddd0b2;
+  box-shadow:
+    0 1px 3px rgba(46, 42, 34, 0.24),
+    inset 0 2px 3px rgba(46, 42, 34, 0.26);
+}
+
+.tablet:focus-visible {
+  outline: 2px solid var(--seal);
+  outline-offset: 3px;
+}
+
+.tablet-icon {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--ink-2);
+}
+
+.tablet-label {
+  display: block;
+  font-family: var(--f-serif);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: 0.02em;
+}
+
+.tablet-label small {
+  display: block;
+  margin-top: 0.14rem;
+  color: var(--ink-3);
+  font-family: var(--f-sans);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* 和人机是推荐路径：蜡红框 + 淡绯纸面 + 城堡画带。文字压到近黑保证可读 */
+.tablet-primary {
+  background-color: #efe1d9;
+  background-image:
+    linear-gradient(90deg, rgba(239, 225, 217, 0.95) 0 22%, rgba(239, 225, 217, 0) 62%),
+    url("./assets/btn-art-solo.webp?v=1"),
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.045) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  color: #211d16;
+}
+
+.tablet-primary:hover {
+  background-color: #ebd6cd;
+}
+
+.tablet-primary:active {
+  background-color: #e4cbc1;
+}
+
+.tablet-primary .tablet-icon {
+  color: #3b2a20;
+}
+
+.tablet-primary .tablet-label small {
+  color: rgba(40, 26, 20, 0.82);
+}

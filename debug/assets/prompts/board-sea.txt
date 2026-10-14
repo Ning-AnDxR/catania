@@ -1,0 +1,26 @@
+Hand-drawn ink and pale watercolour sea chart for a board game, in the manner of a
+19th-century nautical chart or copper-plate book engraving.
+
+Style: fine ink line work with hatching and stipple for texture, never gradients or colour
+blocks. Muted Morandi sea tones only: pale grey-teal #9EB6BA, mid grey-teal #75919B, deep
+grey-teal #5D7B85, and a little aged parchment #E8E2D0. NO black ink - the darkest line in the
+picture is a soft grey-teal. Flat, even, very low contrast: this image is a background layer
+that a game board gets drawn on top of, so it must never compete with it.
+
+Subject: open water on an old chart. Irregular short rows of fine wave hatching spread evenly
+across the whole sheet; a handful of long gentle current lines curving across it; faint rhumb
+lines radiating from the middle of the sheet out towards the edges. A small empty compass rose
+drawn in line only, placed at the middle of the left edge. A tiny three-masted sailing ship
+drawn in line only, at the middle of the right edge. Two or three small bare rock islets with a
+scrap of shoreline near the outer edges.
+
+Composition: keep the middle 60% of the sheet almost empty - only very sparse, very faint wave
+hatching there - because a hexagonal game board will sit on top of it. All the denser detail
+(compass rose, ship, islets, current lines) stays in the outer margin. Flat even light across
+the whole sheet, no cast shadow, no vignette, no frame, no drawn border, no ruled grid.
+
+Constraints: no photorealism, no dark or moody lighting, no high-contrast gradient, no 3D
+render, no glossy digital painting, no cartoon style, no text, no lettering, no numbers, no sea
+monsters, no whales, no land masses in the middle of the sheet, no signature, no watermark.
+
+Size: 2048x1152 landscape.

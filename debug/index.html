@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#9c7c53" />
+    <meta name="catania-build" content="0.9.0" />
+    <title>卡坦岛 · 首页</title>
+    <link rel="stylesheet" href="./skin-parchment.css?v=85" />
+    <link rel="stylesheet" href="./home.css?v=8" />
+  </head>
+  <body class="home-page">
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="paper-edge" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03 0.036" numOctaves="2" seed="11" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+
+    <main class="home-shell">
+      <!-- 背景海图：全部为手写矢量，风格与棋盘、卡牌同源 -->
+      <svg class="home-art" viewBox="0 0 960 640" preserveAspectRatio="xMidYMid slice" role="img" aria-label="卡坦岛海图：灯塔岛岬、帆船与村落">
+        <rect x="-2" y="-2" width="964" height="252" fill="#e8e2d0" />
+        <g fill="none" opacity="0.24" stroke="#2e2a22" stroke-width="1.1">
+          <path d="M60 60h150M76 84h190M240 44h120M520 70h180M560 96h130" />
+        </g>
+
+        <!-- 远山 -->
+        <path d="M470 252 566 96 626 168 700 78 790 190 858 112 962 252Z" fill="#8c8a8c" fill-opacity="0.34" />
+        <path d="M470 252 566 96 626 168 700 78 790 190 858 112 962 252" fill="none" stroke="#2e2a22" stroke-width="1.4" opacity="0.6" />
+        <path d="M700 78 660 130M566 96 540 134" fill="none" opacity="0.4" stroke="#2e2a22" stroke-width="1" />
+
+        <!-- 海面 -->
+        <rect x="-2" y="252" width="964" height="390" fill="#7e96a0" />
+        <g fill="none" stroke="#5d7b85" stroke-width="1.2" opacity="0.55">
+          <path d="M40 300h120M210 330h150M90 386h130M250 430h120" />
+        </g>
+        <g fill="none" stroke="#a9bcbc" stroke-width="1.6" stroke-linecap="round" opacity="0.7">
+          <path d="M70 460q7-8 14 0t14 0M150 500q7-8 14 0t14 0M60 542q7-8 14 0t14 0" />
+        </g>
+
+        <!-- 陆地 -->
+        <path d="M-2 300C120 318 196 356 250 404C320 466 430 496 600 512C720 523 860 528 962 524V642H-2Z" fill="#a6b27f" fill-opacity="0.72" />
+        <path d="M-2 300C120 318 196 356 250 404C320 466 430 496 600 512C720 523 860 528 962 524" fill="none" stroke="#2e2a22" stroke-width="1.8" />
+        <path d="M-2 322C120 340 196 378 250 424C320 486 430 516 600 532" fill="none" stroke="#d7ceb2" stroke-width="9" opacity="0.85" />
+
+        <!-- 林地与山脚 -->
+        <g fill="#6e8570" fill-opacity="0.9" stroke="#2e2a22" stroke-width="1.2" stroke-linejoin="round">
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(620 366) scale(1.5)" />
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(676 352) scale(1.2)" />
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(724 372) scale(1.35)" />
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(786 356) scale(1.1)" />
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(840 372) scale(1.28)" />
+          <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(900 358) scale(1.05)" />
+        </g>
+
+        <!-- 河流 -->
+        <path d="M792 258C770 306 742 330 716 366C696 396 692 430 700 470" fill="none" stroke="#7e96a0" stroke-width="11" stroke-linecap="round" />
+        <path d="M792 258C770 306 742 330 716 366C696 396 692 430 700 470" fill="none" stroke="#2e2a22" stroke-width="1.2" opacity="0.45" />
+
+        <!-- 农田 -->
+        <g stroke="#2e2a22" stroke-width="1.3" fill="none">
+          <path d="M690 470l86-10 26 56-92 12z" fill="#c7b776" fill-opacity="0.8" />
+          <path d="M712 480l70-8M718 500l68-8M726 520l64-8" />
+          <path d="M806 456l74-6 20 52-80 10z" fill="#c7b776" fill-opacity="0.66" />
+          <path d="M826 468l60-6M832 488l58-6" />
+        </g>
+
+        <!-- 村落：小屋与石堡 -->
+        <g stroke="#2e2a22" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M512 452h54v40h-54z" fill="#d7ceb2" />
+          <path d="M504 452l35-26 35 26z" fill="#b0846a" fill-opacity="0.85" />
+          <path d="M586 466h46v34h-46z" fill="#d7ceb2" />
+          <path d="M580 466l29-22 29 22z" fill="#b0846a" fill-opacity="0.85" />
+          <path d="M646 470h42v32h-42z" fill="#d7ceb2" />
+          <path d="M640 470l27-20 27 20z" fill="#b0846a" fill-opacity="0.85" />
+          <path d="M452 436h52v30h-52z" fill="#8c8a8c" fill-opacity="0.9" />
+          <path d="M452 436h13v-11h13v11h13v-11h13v11" />
+          <path d="M478 466v-18h14v18" />
+        </g>
+
+        <!-- 灯塔岛岬 -->
+        <path d="M56 322C96 300 150 306 176 336C204 368 196 418 158 442C112 470 66 456 52 414C40 380 34 344 56 322Z" fill="#8c8a8c" fill-opacity="0.72" />
+        <path d="M56 322C96 300 150 306 176 336C204 368 196 418 158 442C112 470 66 456 52 414C40 380 34 344 56 322Z" fill="none" stroke="#2e2a22" stroke-width="1.8" />
+        <g stroke="#2e2a22" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M104 322v-84h44v84z" fill="#d7ceb2" />
+          <path d="M100 238l26-30 26 30z" fill="#a3453b" fill-opacity="0.85" />
+          <path d="M112 262h28M112 284h28M112 306h28" />
+          <path d="M120 322v-16h14v16z" />
+        </g>
+        <path d="M150 232h58" fill="none" stroke="#2e2a22" stroke-width="1.2" opacity="0.5" />
+
+        <!-- 栈桥与帆船 -->
+        <path d="M232 452h150v12H232z" fill="#ae8c63" stroke="#2e2a22" stroke-width="1.3" />
+        <path d="M250 464v22M292 464v22M334 464v22M372 464v22" fill="none" stroke="#2e2a22" stroke-width="1.6" />
+        <g transform="translate(300 384)" stroke="#2e2a22" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M-58 46C-40 70 40 70 58 46L44 30H-44Z" fill="#ae8c63" />
+          <path d="M0 30V-42" />
+          <path d="M6-38C40-24 46 6 42 26H6Z" fill="#e8e2d0" />
+          <path d="M-6-26C-34-12 -38 10 -34 26H-6Z" fill="#e8e2d0" fill-opacity="0.9" />
+          <path d="M-52 34h104" />
+        </g>
+
+        <!-- 前景货箱 -->
+        <g stroke="#2e2a22" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M392 566h52v44h-52z" fill="#ae8c63" />
+          <path d="M392 566l52 44M444 566l-52 44" opacity="0.55" fill="none" />
+          <path d="M456 580h40v34h-40z" fill="#ae8c63" fill-opacity="0.85" />
+          <path d="M520 588c0-16 30-16 30 0v26h-30z" fill="#8c8a8c" fill-opacity="0.8" />
+          <path d="M520 600h30" opacity="0.5" fill="none" />
+        </g>
+        <g fill="none" stroke="#2e2a22" stroke-width="1.3" stroke-linecap="round" opacity="0.7">
+          <path d="M614 596C614 586 608 580 600 576M614 596C616 584 622 578 630 574M614 596C610 588 604 586 596 586M614 596C620 590 626 588 632 590" />
+        </g>
+      </svg>
+
+      <!-- 主视觉插画位：放进 assets/home-hero.webp 就自动盖掉上面这幅矢量海图，
+           没有文件时保持矢量版，不会出现裂图。 -->
+      <img
+        class="home-art-img art-slot"
+        src="./assets/home-hero.webp?v=2"
+        alt=""
+        width="2400"
+        height="1350"
+      />
+
+      <section class="home-plate">
+        <p class="home-kicker">Catania</p>
+        <h1>卡坦岛</h1>
+        <p class="home-lead">建立据点，连接道路，争夺岛屿霸权。</p>
+
+        <div class="home-actions">
+          <a class="tablet tablet-primary" href="./game.html?mode=solo&amp;bots=3&amp;difficulty=medium">
+            <svg class="tablet-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3.6 20.4v-6.8L8.4 10l4.8 3.6v6.8z" />
+                <path d="M12.6 20.4v-4.6l3-2.3 3.4 2.3v4.6z" />
+                <path d="M8.4 10V6.4M8.4 6.4l3.4-1.8" />
+              </g>
+            </svg>
+            <span class="tablet-label">与人机对战<small>三档难度，离线可玩</small></span>
+          </a>
+
+          <a class="tablet" href="./game.html?mode=online">
+            <svg class="tablet-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3.4a8.6 8.6 0 1 0 0 17.2 8.6 8.6 0 0 0 0-17.2z" />
+                <path d="M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.4 3.6 8.6S14.4 18.2 12 20.6C9.6 18.2 8.4 15.2 8.4 12S9.6 5.8 12 3.4z" />
+              </g>
+            </svg>
+            <span class="tablet-label">连接服务器<small>输入房间号，与真人开局</small></span>
+          </a>
+        </div>
+
+        <p class="home-note">本地对局直接开局；联机需要房间号，房主添加人机后开始。</p>
+      </section>
+    </main>
+
+    <script>
+      document.querySelectorAll("img.art-slot").forEach((img) => {
+        const mark = () => img.classList.add("is-missing");
+        if (img.complete && img.naturalWidth === 0) mark();
+        img.addEventListener("error", mark);
+      });
+    </script>
+  </body>
+</html>

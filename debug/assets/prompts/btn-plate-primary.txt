@@ -1,0 +1,18 @@
+Hand-drawn ink and pale watercolour surface for a board-game UI button, in the manner of a
+19th-century nautical chart or copper-plate book engraving.
+
+Subject: an EMPTY button plate, front view, orthographic, centred, thin flat frame, with
+generous plain margins on all sides. A thick rounded wooden frame with two fine dark ink
+outlines running just inside its outer and inner edges; four round studs with ink outlines at
+the four corners of the frame; a completely plain empty centre - no text, no letters, no
+numbers, no icons, no symbols, no ornament inside the frame.
+
+Geometry: the plate fills about 76% of the image width and 58% of the image height, centred,
+so all four corners of the image stay empty (the plate will be used as a nine-slice border).
+Flat even light across the whole plate, no cast shadow, no drop shadow, no bevel highlight,
+no gradient across the centre, no vignette.
+
+Constraints: no photorealism, no dark moody lighting, no high-contrast gradient, no 3D render,
+no glossy digital painting, no cartoon style, no text anywhere, no signature, no watermark.
+
+Colour: the frame is dark oak #57452F with #2E2A22 ink lines, the studs are pale #D7CEB2 with ink outlines, and the centre is wax red #A3453B with the same fine hatching used elsewhere (no gradient).

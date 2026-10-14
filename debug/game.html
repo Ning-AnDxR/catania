@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="catania-build" content="0.9.0" />
+    <title>Catania - Online Game</title>
+    <link rel="stylesheet" href="./style.css?v=20261011-30" />
+    <link rel="stylesheet" href="./skin-parchment.css?v=85" />
+    <meta name="theme-color" content="#9c7c53" />
+  </head>
+  <body>
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <!-- 手绘边框：只作用在装饰层上，文字不参与抖动 -->
+        <filter id="paper-edge" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03 0.036" numOctaves="2" seed="11" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+
+        <!-- 资源图记：与棋盘、卡牌同源的墨线，替代原来的 emoji -->
+        <symbol id="r-wood" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.6 7.4h11.2l3.6 3-3.6 3H4.6z" />
+            <path d="M7.2 7.4v6M11.4 7.4v6M15.6 7.4v6" />
+            <path d="M6.4 15.4h11.2l3.4 2.9-3.4 2.9H6.4z" />
+            <path d="M9.2 15.4v5.8M13.4 15.4v5.8" />
+          </g>
+        </symbol>
+        <symbol id="r-brick" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M3.4 9.2h7.4v3.6H3.4zM12.2 9.2h8.4v3.6h-8.4z" />
+            <path d="M7.6 13.2h7.4V17H7.6zM17 13.2h3.6V17H17z" />
+            <path d="M3.4 17h2.6" />
+          </g>
+        </symbol>
+        <symbol id="r-sheep" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.6 17.4c-3 0-4.6-2-4-4 .5-1.6 2.1-2.4 3.5-2.2-.5-2.3 1.6-4.2 3.9-3.8.7-1.7 3-2.4 4.6-1.4 1.2.8 1.6 2 1.4 3 1.9.3 3.1 1.9 2.7 3.7-.3 1.5-1.6 2.4-3.1 2.4z" />
+            <path d="M9.6 13.6c.9 1.1.9 2.4 0 3.4M12.8 13.4c1 1.2 1 2.6 0 3.7" />
+          </g>
+        </symbol>
+        <symbol id="r-wheat" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20.6V9.4" />
+            <path d="M12 10.4c-1.8-.5-2.7-1.8-2.6-3.2M12 10.4c1.8-.5 2.7-1.8 2.6-3.2M12 14c-1.8-.5-2.7-1.8-2.6-3.2M12 14c1.8-.5 2.7-1.8 2.6-3.2M12 17.6c-1.8-.5-2.7-1.8-2.6-3.2M12 17.6c1.8-.5 2.7-1.8 2.6-3.2" />
+            <path d="M9.4 7.2 12 4.6l2.6 2.6" />
+          </g>
+        </symbol>
+        <symbol id="r-ore" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.4 18.8 5.2 12.4l3.8-4.2 6.2-.6 3.6 5.6-2.8 5.6z" />
+            <path d="M9 8.2l2.6 4.2 6.8-.2M11.6 12.4v6.2" />
+          </g>
+        </symbol>
+
+        <!-- 音效开关：同一只手绘线条，开有波纹、闭是叉 -->
+        <symbol id="icon-sound-on" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.4 9.3h3.2l4.2-3.3v12l-4.2-3.3H4.4z" />
+            <path d="M15.1 9.4c1.4 1.6 1.4 4 0 5.6" />
+            <path d="M17.8 6.9c2.7 2.9 2.7 7.3 0 10.2" />
+          </g>
+        </symbol>
+        <symbol id="icon-sound-off" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.4 9.3h3.2l4.2-3.3v12l-4.2-3.3H4.4z" />
+            <path d="M15.3 10.1l4.6 4.6M19.9 10.1l-4.6 4.6" />
+          </g>
+        </symbol>
+
+        <!-- 手牌上的缩略风景：手牌只有 60px 宽，风景简化到三四个形状才读得出来。
+             图幅 112×76，是显示尺寸的两倍，保证高清屏不糊。 -->
+        <symbol id="sc-wood" viewBox="0 0 112 76">
+          <path d="M-2 30h116" fill="none" opacity="0.22" stroke="#2e2a22" stroke-width="1" />
+          <path d="M-2 42C18 28 44 26 62 34C82 43 98 48 114 46V78H-2Z" fill="#a6b27f" fill-opacity="0.55" />
+          <path d="M-2 42C18 28 44 26 62 34C82 43 98 48 114 46" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <g fill="#6e8570" fill-opacity="0.88" stroke="#2e2a22" stroke-linejoin="round" stroke-width="1.1">
+            <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(24 37.6) scale(0.5)" />
+            <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(46 35.2) scale(0.62)" />
+            <path d="M0-21L8-7L3.4-7L11 8L-11 8L-3.4-7L-8-7Z" transform="translate(68 38.4) scale(0.46)" />
+          </g>
+        </symbol>
+        <symbol id="sc-brick" viewBox="0 0 112 76">
+          <path d="M-2 38C18 24 46 24 68 34C88 43 100 45 114 43V78H-2Z" fill="#b0846a" fill-opacity="0.32" />
+          <path d="M-2 38C18 24 46 24 68 34C88 43 100 45 114 43" fill="none" opacity="0.5" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M-2 54C24 38 56 38 80 48C96 54 104 56 114 54V78H-2Z" fill="#b0846a" fill-opacity="0.55" />
+          <path d="M-2 54C24 38 56 38 80 48C96 54 104 56 114 54" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <path d="M-2 64h116M-2 70h116" fill="none" opacity="0.28" stroke="#2e2a22" stroke-width="0.9" />
+        </symbol>
+        <symbol id="sc-sheep" viewBox="0 0 112 76">
+          <path d="M-2 40C30 32 70 34 114 30V78H-2Z" fill="#a6b27f" fill-opacity="0.55" />
+          <path d="M-2 40C30 32 70 34 114 30" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <path d="M24 48V34M52 47V33M80 46V32" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="2" />
+          <path d="M18 40L88 36M18 46L88 42" fill="none" stroke="#2e2a22" stroke-width="1.6" />
+          <path d="M86 68C79 68 74 62 77 56C80 51 87 49 93 52C98 55 100 61 97 65C101 70 92 73 86 70Z" fill="#d7ceb2" fill-opacity="0.9" stroke="#2e2a22" stroke-width="1.3" />
+          <path d="M84 54v16M92 52v18" fill="none" opacity="0.45" stroke="#2e2a22" stroke-width="0.9" />
+        </symbol>
+        <symbol id="sc-wheat" viewBox="0 0 112 76">
+          <path d="M-2 36h116" fill="none" opacity="0.3" stroke="#2e2a22" stroke-width="1" />
+          <path d="M-2 38H114V78H-2Z" fill="#c7b776" fill-opacity="0.55" />
+          <path d="M14 78V40M30 78V39M46 78V39M62 78V39M78 78V40M94 78V40" fill="none" opacity="0.33" stroke="#2e2a22" stroke-width="1" />
+          <g fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4">
+            <path d="M30 62V50M30 56C27 55 25 53 25.4 50M30 56C33 55 35 53 34.6 50M30 50C27 49 25 47 25.4 44M30 50C33 49 35 47 34.6 44M27 45L30 41L33 45" />
+            <path d="M74 64V52M74 58C71 57 69 55 69.4 52M74 58C77 57 79 55 78.6 52M74 52C71 51 69 49 69.4 46M74 52C77 51 79 49 78.6 46M71 47L74 43L77 47" />
+          </g>
+        </symbol>
+        <symbol id="sc-ore" viewBox="0 0 112 76">
+          <path d="M-2 46L18 22L38 40L56 18L78 44L92 30L114 46Z" fill="#8c8a8c" fill-opacity="0.35" />
+          <path d="M-2 46L18 22L38 40L56 18L78 44L92 30L114 46" fill="none" opacity="0.6" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M4 64L40 26L76 64Z" fill="#8c8a8c" fill-opacity="0.5" />
+          <path d="M4 64L40 26L76 64" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <path d="M40 26L31 44M40 26L49 42" fill="none" opacity="0.4" stroke="#2e2a22" stroke-width="0.9" />
+          <path d="M66 70C72 55 87 50 101 55C108 57 112 61 112 66V78H66Z" fill="#8c8a8c" fill-opacity="0.45" />
+          <path d="M80 70V60C80 56 83 53 87 53C91 53 94 56 94 60V70Z" fill="#2e2a22" fill-opacity="0.55" />
+          <path d="M77 70V58H97V70" fill="none" stroke="#2e2a22" stroke-width="1.7" />
+        </symbol>
+
+        <!-- 发展卡风景版：与资源手牌同一套缩略风景手法，图幅 96×60，显示尺寸的两倍 -->
+        <symbol id="kc-knight" viewBox="0 0 96 60">
+          <path d="M-2 40C22 32 60 34 98 30V62H-2Z" fill="#a6b27f" fill-opacity="0.5" />
+          <path d="M-2 40C22 32 60 34 98 30" fill="none" stroke="#2e2a22" stroke-width="1.3" />
+          <path d="M30 46L24 8" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="2" />
+          <path d="M24 12L62 7L52 20L62 32L27 38Z" fill="#b0846a" fill-opacity="0.6" stroke="#2e2a22" stroke-linejoin="round" stroke-width="1.3" />
+          <path d="M60 50V32L71 24L82 32V50Z" fill="#8ca29c" fill-opacity="0.55" stroke="#2e2a22" stroke-linejoin="round" stroke-width="1.3" />
+          <path d="M60 40H82" fill="none" opacity="0.5" stroke="#2e2a22" stroke-width="1" />
+        </symbol>
+        <symbol id="kc-victoryPoint" viewBox="0 0 96 60">
+          <path d="M34 34L28 58L44 47L56 59L60 34Z" fill="#b0846a" fill-opacity="0.5" stroke="#2e2a22" stroke-linejoin="round" stroke-width="1.2" />
+          <path d="M48 4C62 4 74 14 74 27C74 40 63 50 48 50C33 50 22 40 22 27C22 14 34 4 48 4Z" fill="#a3453b" fill-opacity="0.88" stroke="#8b392f" stroke-width="1.6" />
+          <path d="M48 13L52 23L62 24L54 31L56 41L48 35L40 41L42 31L34 24L44 23Z" fill="none" stroke="#e8e2d0" stroke-linejoin="round" stroke-width="2" />
+        </symbol>
+        <symbol id="kc-roadBuilding" viewBox="0 0 96 60">
+          <path d="M-2 34C20 26 60 28 98 24V62H-2Z" fill="#a6b27f" fill-opacity="0.45" />
+          <path d="M-2 34C20 26 60 28 98 24" fill="none" stroke="#2e2a22" stroke-width="1.3" />
+          <path d="M30 60L44 26H52L58 60Z" fill="#d7ceb2" fill-opacity="0.8" />
+          <path d="M30 60L44 26M58 60L52 26" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <path d="M35 52H55M39 42H53M43 33H51" fill="none" stroke="#2e2a22" stroke-width="1.6" />
+          <path d="M4 50H24M4 56H24" fill="none" opacity="0.6" stroke="#2e2a22" stroke-width="1.4" />
+        </symbol>
+        <symbol id="kc-yearOfPlenty" viewBox="0 0 96 60">
+          <path d="M-2 36C22 30 60 30 98 34V62H-2Z" fill="#c7b776" fill-opacity="0.5" />
+          <path d="M-2 36C22 30 60 30 98 34" fill="none" stroke="#2e2a22" stroke-width="1.3" />
+          <path d="M26 24H70V42H26Z" fill="#ae8c63" fill-opacity="0.7" stroke="#2e2a22" stroke-linejoin="round" stroke-width="1.4" />
+          <path d="M36 24V12M36 19C33 18 31 16 31.5 13M36 19C39 18 41 16 40.5 13M36 12C33 11 31 9 31.5 6M36 12C39 11 41 9 40.5 6M33 7L36 3L39 7" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="1.3" />
+          <path d="M56 24V14M56 19C53 18 51 16 51.5 13M56 19C59 18 61 16 60.5 13M53 9L56 5L59 9" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="1.3" />
+          <circle cx="38" cy="46" r="8" fill="#dfd8c2" stroke="#2e2a22" stroke-width="1.8" />
+          <circle cx="64" cy="46" r="8" fill="#dfd8c2" stroke="#2e2a22" stroke-width="1.8" />
+        </symbol>
+        <symbol id="kc-monopoly" viewBox="0 0 96 60">
+          <path d="M-2 44H98V62H-2Z" fill="#ded7c0" fill-opacity="0.9" />
+          <path d="M-2 44H98" fill="none" stroke="#2e2a22" stroke-width="1.4" />
+          <path d="M48 44V17" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="2" />
+          <path d="M30 18H66" fill="none" stroke="#2e2a22" stroke-linecap="round" stroke-width="1.8" />
+          <path d="M32 18V28M64 18V28" fill="none" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M24 28C28 36 36 36 40 28Z" fill="#8c8a8c" fill-opacity="0.5" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M56 28C60 36 68 36 72 28Z" fill="#8c8a8c" fill-opacity="0.5" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M16 44C12 37 18 33 22 35C26 33 32 37 28 44Z" fill="#c7b776" fill-opacity="0.75" stroke="#2e2a22" stroke-width="1.2" />
+          <path d="M68 44C64 37 70 33 74 35C78 33 84 37 80 44Z" fill="#c7b776" fill-opacity="0.75" stroke="#2e2a22" stroke-width="1.2" />
+          <circle cx="48" cy="15" r="2.6" fill="#ae8c63" stroke="#2e2a22" stroke-width="1.1" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <header class="app-header">
+      <a class="brand" href="/debug/" aria-label="Catania 首页">
+        <span class="brand-mark">C</span>
+        <span>
+          <strong>Catania</strong>
+          <small>卡坦岛<br />在线对局</small>
+        </span>
+      </a>
+
+      <div class="header-status" aria-live="polite">
+        <div>
+          <span>阶段</span>
+          <strong id="phase">等待开始</strong>
+        </div>
+        <div>
+          <span>当前玩家</span>
+          <strong id="current-player">-</strong>
+        </div>
+      </div>
+
+      <div class="new-game">
+        <label>
+          玩家名称
+          <input id="player-name" value="玩家" maxlength="12" />
+        </label>
+        <label>
+          AI 数量
+          <select id="bot-count">
+            <option value="2">2 个 AI（3 人局）</option>
+            <option value="3" selected>3 个 AI（4 人局）</option>
+          </select>
+        </label>
+        <label>
+          AI 难度
+          <select id="bot-difficulty">
+            <option value="easy">简单</option>
+            <option value="medium" selected>中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </label>
+        <button id="new-game" class="primary btn-plate">开始本地游戏</button>
+      </div>
+      <!-- 状态牌 + 音效开关合成一格，顶栏网格仍是 4 列，不必动 .app-header 的列定义 -->
+      <div class="header-tools">
+        <div
+          id="net-status"
+          class="net-status"
+          data-state="local"
+          role="status"
+          aria-live="polite"
+          title="联机连接状态"
+        >
+          <span class="net-dot" aria-hidden="true"></span>
+          <span id="net-status-text">本地对局</span>
+        </div>
+        <button
+          id="sound-toggle"
+          class="sound-toggle"
+          type="button"
+          aria-label="音效开关"
+          aria-pressed="true"
+          title="音效：开"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-sound-on"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="game-shell">
+      <section class="board-stage">
+        <div class="board-toolbar">
+          <div class="turn-pill">
+            <span>当前回合</span>
+            <strong id="turn-status">等待开始</strong>
+            <small id="turn-timer" class="turn-timer">无倒计时</small>
+          </div>
+          <div id="action-hint" class="action-banner">点击开始本地游戏或连接服务器</div>
+          <div class="board-tools" aria-label="棋盘工具">
+            <button id="board-reset" type="button" title="复位棋盘">复位</button>
+            <button id="board-help" type="button" title="查看规则">规则</button>
+            <button id="toggle-sidebar" type="button" title="收起右侧信息栏">收起侧栏</button>
+          </div>
+        </div>
+
+        <div class="board-canvas">
+          <svg id="board" role="img" aria-label="卡坦岛棋盘"></svg>
+          <div id="completion" class="completion hidden"></div>
+        </div>
+
+        <div class="bottom-dock">
+          <div class="dock-section dice-section">
+            <div id="dice-display" class="dice-display">--</div>
+            <div class="turn-actions">
+              <button id="roll-dice" class="btn-plate turn-btn" disabled>掷骰</button>
+              <button id="end-turn" class="btn-plate turn-btn" disabled>结束回合</button>
+            </div>
+          </div>
+
+          <div class="dock-section build-section">
+            <div class="dock-label">建造</div>
+            <div class="build-actions">
+              <button id="build-road" title="消耗木材 1、砖块 1" disabled>
+                <span>道路</span><small>木 1 · 砖 1</small>
+              </button>
+              <button id="build-settlement" title="消耗木材 1、砖块 1、羊毛 1、小麦 1" disabled>
+                <span>定居点</span><small>木 1 · 砖 1 · 羊 1 · 麦 1</small>
+              </button>
+              <button id="build-city" title="消耗矿石 3、小麦 2" disabled>
+                <span>城市</span><small>矿 3 · 麦 2</small>
+              </button>
+            </div>
+            <div id="build-hint" class="build-hint">选择建造项目或结束回合</div>
+          </div>
+
+          <div class="dock-section hand-section">
+            <div class="dock-label">我的手牌</div>
+            <div id="hand-dock" class="hand-dock"></div>
+            <div class="hand-rule" aria-hidden="true"></div>
+            <div id="dev-hand-hint" class="dev-hint-row">发展卡</div>
+            <div id="dev-hand-dock" class="hand-dock dev-hand-dock"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <button id="close-sidebar" class="side-close" type="button">收起侧栏</button>
+        <div class="side-tabs" role="tablist" aria-label="信息面板">
+          <button
+            class="side-tab active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            data-sidebar-tab="table"
+          >
+            对局
+          </button>
+          <button
+            class="side-tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            data-sidebar-tab="room"
+          >
+            房间
+          </button>
+          <button
+            class="side-tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            data-sidebar-tab="log"
+          >
+            记录
+          </button>
+        </div>
+
+        <section id="sidebar-room" class="side-section side-view hidden">
+          <div class="side-heading">
+            <h2>联机房间</h2>
+            <span id="online-status">未连接</span>
+          </div>
+          <div class="side-section-body">
+            <!-- 没进房间时只留进房入口：连接已有房间，或开一个新房间 -->
+            <div id="online-entry" class="online-form">
+              <div class="online-grid">
+                <label>
+                  房间号
+                  <input id="online-room-id" value="catan-room" maxlength="30" />
+                </label>
+                <label>
+                  名称
+                  <input id="online-player-name" value="玩家" maxlength="12" />
+                </label>
+              </div>
+              <button id="connect-online" class="online-wide btn-plate" type="button">连接服务器</button>
+              <button id="create-room" class="online-wide btn-plate" type="button">创建房间</button>
+              <button id="spectate-online" class="online-wide btn-plate" type="button">观战房间</button>
+            </div>
+
+            <!-- 进了房间：座位表 + 开桌 -->
+            <div id="online-room-view" class="hidden">
+              <div class="online-room-head">
+                <span>房间号</span>
+                <strong id="online-room-id-value"></strong>
+                <button id="copy-room-id" class="btn-plate" type="button">复制</button>
+              </div>
+              <div id="online-seats" class="online-seats"></div>
+              <div id="online-room-hint" class="online-room-hint"></div>
+              <div id="online-spectators" class="online-spectators"></div>
+              <div class="online-actions">
+                <button id="online-start" class="btn-plate" disabled>开始游戏</button>
+              </div>
+              <div id="online-player-controls" class="online-control-list"></div>
+              <div id="online-spectator-controls" class="online-control-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="sidebar-table" class="side-section side-view table-panel">
+          <!-- 玩家在上、行动在下：先看清场面，再点按钮 -->
+          <div class="side-heading">
+            <h2>玩家</h2>
+            <span id="player-count">0</span>
+          </div>
+          <div id="players" class="players"></div>
+
+          <div class="side-heading action-heading">
+            <h2>行动</h2>
+            <span>Command</span>
+          </div>
+          <div id="discard-controls" class="special-controls hidden">
+            <div id="discard-summary" class="special-summary"></div>
+            <div id="discard-resource-list" class="resource-choice-list"></div>
+            <button id="confirm-discard" class="btn-plate" disabled>确认弃牌</button>
+          </div>
+          <div id="steal-controls" class="special-controls hidden">
+            <div class="special-summary">选择一名玩家偷取资源</div>
+            <div id="steal-player-list" class="choice-list"></div>
+          </div>
+          <div id="development-controls" class="special-controls hidden">
+            <div id="development-summary" class="special-summary"></div>
+            <button id="buy-development-card" class="primary" disabled>
+              购买并抽取发展卡
+            </button>
+          </div>
+          <div id="resource-choice-controls" class="special-controls hidden">
+            <div class="special-summary">选择一项资源</div>
+            <div id="resource-choice-list" class="choice-list"></div>
+          </div>
+          <div id="trade-controls" class="special-controls hidden">
+            <div id="trade-summary" class="special-summary"></div>
+            <div id="trade-action-list" class="choice-list"></div>
+            <div id="bank-trade-form" class="trade-form">
+              <label>
+                给出
+                <select id="bank-give-resource"></select>
+              </label>
+              <label>
+                获得
+                <select id="bank-receive-resource"></select>
+              </label>
+              <!-- 两个交易入口并排一行：跟银行换、跟玩家换 -->
+              <div class="trade-actions-row">
+                <button id="bank-trade-button">银行 / 港口兑换</button>
+                <button id="open-trade-dialog" type="button">向玩家发起交易</button>
+              </div>
+            </div>
+          </div>
+          <div id="action-placeholder" class="empty-state">
+            当前没有需要处理的行动
+          </div>
+        </section>
+
+        <section id="sidebar-log" class="side-section side-view log-panel hidden">
+          <div class="side-heading">
+            <h2>事件</h2>
+            <div class="side-heading-actions">
+              <button id="open-match-history" type="button">战绩</button>
+              <button id="open-replay" type="button">复盘</button>
+            </div>
+          </div>
+          <div id="history-status" class="history-status"></div>
+          <div id="match-history-summary" class="match-history-summary hidden"></div>
+          <ol id="event-log" class="event-log"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <div id="help-dialog" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <div class="side-heading">
+          <h2>快速规则</h2>
+          <button id="close-help" type="button">关闭</button>
+        </div>
+        <ul>
+          <li>道路必须连接自己的道路、定居点或城市。</li>
+          <li>定居点之间必须至少间隔一个交点。</li>
+          <li>先选择建造类型，再点击棋盘上的高亮位置。</li>
+          <li>点击骰子区域附近的操作按钮推进当前回合。</li>
+          <li>联机模式下所有操作均由服务器校验。</li>
+          <li>快捷键：R 掷骰、E 结束回合、Space 确认、1/2/3 选择建造、Esc 取消。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="trade-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-label="向玩家发起交易">
+      <div class="modal-content trade-dialog-content">
+        <div class="side-heading">
+          <div>
+            <h2>发起交易</h2>
+            <small class="trade-dialog-hint">从我手里的牌挑给对方，再挑我想要什么</small>
+          </div>
+          <button id="close-trade-dialog" type="button">关闭</button>
+        </div>
+        <div id="trade-builder" class="trade-builder"></div>
+        <div class="trade-dialog-actions">
+          <button id="clear-trade-draft" type="button">清空</button>
+          <button id="create-trade-button" type="button" disabled>
+            向所有玩家发起交易
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="replay-dialog" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content replay-modal-content">
+        <div class="side-heading">
+          <div>
+            <h2>对局复盘</h2>
+            <small id="replay-meta" class="replay-meta"></small>
+          </div>
+          <button id="close-replay" type="button">关闭</button>
+        </div>
+        <div id="replay-event-detail" class="replay-event-detail">暂无事件</div>
+        <div class="replay-controls">
+          <button id="replay-prev" type="button">上一条</button>
+          <button id="replay-toggle" type="button">播放</button>
+          <button id="replay-next" type="button">下一条</button>
+        </div>
+        <input id="replay-range" class="replay-range" type="range" min="0" max="0" value="0" />
+        <ol id="replay-event-list" class="replay-event-list"></ol>
+      </div>
+    </div>
+
+    <div id="placement-confirm" class="placement-confirm hidden" role="dialog" aria-label="确认操作">
+      <p></p>
+      <div class="placement-confirm-actions">
+        <button type="button" class="primary confirm-yes">确认</button>
+        <button type="button" class="confirm-no">取消</button>
+      </div>
+    </div>
+
+    <div
+      id="create-room-dialog"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="创建房间"
+    >
+      <div class="modal-content create-room-content">
+        <div class="side-heading">
+          <h2>创建房间</h2>
+          <button id="close-create-room" type="button">关闭</button>
+        </div>
+        <div class="create-room-body">
+          <label>
+            房间号
+            <input id="create-room-id" maxlength="30" autocomplete="off" />
+          </label>
+          <label>
+            玩家数量
+            <select id="create-room-players">
+              <option value="3">3 人</option>
+              <option value="4" selected>4 人</option>
+            </select>
+          </label>
+          <label>
+            人机数量
+            <select id="create-room-bots"></select>
+          </label>
+          <label>
+            人机难度
+            <select id="create-room-difficulty">
+              <option value="easy">简单</option>
+              <option value="medium" selected>中等</option>
+              <option value="hard">困难</option>
+            </select>
+          </label>
+          <label>
+            回合计时
+            <select id="create-room-timer">
+              <option value="0">关闭</option>
+              <option value="30000">30 秒</option>
+              <option value="60000" selected>60 秒</option>
+              <option value="90000">90 秒</option>
+            </select>
+          </label>
+          <label>
+            观战上限
+            <input id="create-room-max-spectators" type="number" min="0" max="50" value="10" />
+          </label>
+          <label class="host-toggle">
+            <input id="create-room-allow-spectators" type="checkbox" checked />
+            允许观战
+          </label>
+          <label class="host-toggle">
+            <input id="create-room-allow-takeover" type="checkbox" checked />
+            断线后 AI 接管
+          </label>
+        </div>
+        <div class="create-room-actions">
+          <button id="confirm-create-room" class="btn-plate" type="button">确认创建房间</button>
+          <button id="cancel-create-room" class="btn-plate" type="button">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="net-toast"
+      class="net-toast notice notice--warn"
+      role="status"
+      aria-live="polite"
+      hidden
+    ></div>
+
+    <div id="board-tooltip" class="board-tooltip" role="tooltip" hidden></div>
+
+    <script src="./bundle.js?v=20261011-117"></script>
+  </body>
+</html>

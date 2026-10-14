@@ -1,0 +1,24 @@
+{
+  "name": "catania",
+  "version": "0.9.0",
+  "description": "卡坦岛风格网页游戏：规则引擎 + WebSocket 权威服务器 + 复古羊皮纸手绘界面",
+  "keywords": ["catan", "board-game", "websocket", "svg", "game"],
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "build:debug": "node scripts/build-debug-bundle.mjs",
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:restore": "node scripts/db-restore.mjs",
+    "replay": "node scripts/replay-room.mjs",
+    "stats": "node scripts/player-stats.mjs",
+    "test": "node tests/board.test.js && node tests/setup.test.js && node tests/random-bot.test.js && node tests/phase-2.test.js && node tests/phase-3.test.js && node tests/phase-4.test.js && node tests/phase-5.test.js && node tests/phase-6.test.js && node tests/phase-7.test.js && node tests/phase-8.test.js && node tests/phase-9.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

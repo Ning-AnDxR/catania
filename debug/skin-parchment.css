@@ -1,0 +1,3423 @@
+/* =========================================================
+   复古木质手绘殖民风 · 覆盖层
+   加载顺序放在 style.css 之后：只改视觉，不动任何布局尺寸。
+   想回到原来的深海配色，删掉 index.html 里的这一行 link 即可。
+   ========================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* 新令牌 */
+  --paper: #e8e2d0;
+  --paper-2: #ded7c0;
+  --paper-3: #cfc5a9;
+  --paper-edge: #b4a886;
+  --ink-2: #564f3e;
+  --ink-3: #6b6350;
+  --wood: #ae8c63;
+  --wood-2: #9c7c53;
+  --wood-3: #7d6343;
+  --wood-4: #57452f;
+  --sea: #8ca29c;
+  --sea-2: #7a928c;
+  --sea-3: #667e79;
+  --seal: #a3453b;
+  --seal-2: #8b392f;
+  --verd: #5e857a;
+  --f-serif: "Noto Serif SC", "Songti SC", "宋体", Georgia, serif;
+  --f-sans: "Noto Sans SC", "Microsoft YaHei", "微软雅黑", "Segoe UI", system-ui, sans-serif;
+
+  /* 把原来的深海令牌整套改向纸与木，绝大多数颜色随之翻转 */
+  --ocean-950: #9c7c53;
+  --ocean-900: #7d6343;
+  --ocean-800: #8f7148;
+  --ocean-700: #ae8c63;
+  --ocean-600: #c3a67f;
+  --ocean-500: #d3bd9c;
+  --ink: #2e2a22;
+  --muted: #564f3e;
+  --line: rgba(46, 42, 34, 0.42);
+  --line-strong: rgba(46, 42, 34, 0.66);
+  --panel: rgba(232, 226, 208, 0.96);
+  --panel-soft: rgba(223, 216, 194, 0.92);
+  --orange: #a3453b;
+  --orange-strong: #8b392f;
+  --blue: #45607a;
+  --green: #6e7a45;
+  --danger: #a3453b;
+  --shadow: 3px 3px 0 rgba(87, 69, 47, 0.3);
+
+  /* ---------- 动效刻度 ----------
+     全站就用这几档，别在某个组件里现场编一个 470ms。
+     名字按"用在哪"取，不按大小：这样下次加动效时先想的是哪一类，而不是抄个数。
+
+       quick   指针反馈：hover 上浮、描边、透明度
+       base    落一下：数字滚动、划线、淡出
+       stamp   盖章那一下，带回弹
+       rise    格子上的一下：收牌、花牌、棋盘脉冲
+       beat    一次事件的落定：阶段换字、地块闪、行脉冲
+       carry   搬运：名字换过去、逐块点亮、小票偏一下
+       hold    轮到谁那一行的脉冲，比 carry 再慢一点
+       lift    轮到我那一下，最长的一档
+
+     跨区域的飞行（飞牌、小票回手）在 app.js 的 MOTION.fly / MOTION.reel 里，
+     数值和这里对齐。 */
+  --motion-quick: 120ms;
+  --motion-base: 240ms;
+  --motion-stamp: 320ms;
+  --motion-rise: 420ms;
+  --motion-beat: 520ms;
+  --motion-carry: 620ms;
+  --motion-hold: 760ms;
+  --motion-lift: 1100ms;
+
+  --ease-soft: cubic-bezier(0.3, 0.7, 0.3, 1);
+  --ease-out: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --ease-inout: cubic-bezier(0.4, 0.1, 0.6, 1);
+  --ease-snap: cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+/* ---------- 底色：木桌与纸 + 数字一律等宽 ---------- */
+body {
+  font-family: var(--f-sans);
+  font-variant-numeric: tabular-nums lining-nums;
+  background-color: var(--wood-2);
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 178px, rgba(46, 42, 34, 0.3) 178px 181px),
+    repeating-linear-gradient(181deg, rgba(46, 42, 34, 0.05) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(179.4deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 15px),
+    linear-gradient(180deg, rgba(87, 69, 47, 0.32), rgba(87, 69, 47, 0) 34%, rgba(46, 42, 34, 0.26));
+}
+
+/* ---------- 手绘边：只画框，不碰文字，也不碰定位 ----------
+   这里只给「原本没有定位」的网格子项补 relative。
+   .board-toolbar / .bottom-dock / .completion 本来就是 absolute，
+   一旦被改成 relative 就会掉出绝对定位、挤到画布上方（已踩过一次）。 */
+.turn-pill,
+.action-banner,
+.modal-content {
+  position: relative;
+}
+
+/* 走手绘边的这几个，实体边框直接取消：抖动描边就是唯一的边。
+   即使浏览器不支持滤镜，::after 也仍然会画出一条利落的墨框。 */
+/* 底部那三格自己已经各有一圈木框，外面再套一层墨线就成了「框外框」，
+   所以 .bottom-dock 不参与这组手绘边（它的 ::after 直接不生成）。 */
+.app-header::after,
+.board-toolbar::after,
+.turn-pill::after,
+.action-banner::after,
+.modal-content::after,
+.completion::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.6px solid #2e2a22;
+  border-radius: 3px;
+  filter: url(#paper-edge);
+  pointer-events: none;
+}
+
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------- 结构：顶栏与底槽是木，面板是纸 ---------- */
+.app-header {
+  border-bottom: 1.8px solid #2e2a22;
+  background-color: var(--wood);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(46, 42, 34, 0.16) 0 2px, transparent 2px 156px),
+    repeating-linear-gradient(92deg, rgba(46, 42, 34, 0.07) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(87, 69, 47, 0.2));
+}
+
+.header-status {
+  border: 1.4px solid rgba(46, 42, 34, 0.45);
+  border-radius: 3px;
+  background: rgba(46, 42, 34, 0.24);
+  /* 原来写死三列，去掉版本格以后会空出第三条轨道，露出一块木色。
+     改成按子元素数量自动分列，几格就几列。 */
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.header-status > div {
+  /* 原来是平涂的 #E8E2D0，压在木色页眉上就是两块强对比色块。
+     换成半透羊皮纸的柔和提亮：融进木头里，墨色文字对比仍有 7:1 以上。 */
+  border: 1.4px solid rgba(46, 42, 34, 0.2);
+  border-radius: 3px;
+  background: rgba(232, 226, 208, 0.55);
+}
+
+.brand-mark {
+  border: 1.4px solid #2e2a22;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.brand strong {
+  font-family: var(--f-serif);
+  letter-spacing: 0.05em;
+}
+
+.game-shell {
+  background: var(--sea);
+}
+
+.board-stage {
+  /* 海面分两层：海图本体搬到 ::before 上（要动它），这里只剩兜底底纹 ——
+     经纬网格 + 莫兰迪灰青渐变，中间偏亮、四周压深，海图加载不出来时才露出来。
+     海图不做任何调色，原样用。 */
+  background-color: #6d8a93;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(46, 42, 34, 0.07) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, rgba(46, 42, 34, 0.07) 0 1px, transparent 1px 40px),
+    radial-gradient(circle at 50% 42%, #87a3a9 0%, #75919b 55%, #5d7b85 100%);
+  background-repeat: no-repeat, repeat, repeat, no-repeat;
+  background-size: cover, auto, auto, auto;
+  background-position: center, 0 0, 0 0, center;
+}
+
+/* ---------- 海面缓慢流动 ----------
+   海图放在一个比 stage 大 8% 的浮层上，只动 transform：
+   合成层上的一次平移，不重排、不重绘，所以再大的画面也不卡。
+   一层走 72 秒来回（约 0.6px/秒），另加一层几乎看不出的明暗呼吸（0.97~1），
+   两个周期错开，看起来是水在动，而不是一张画在滑。
+   位移最大 2.2%（相对浮层）= 2.4% of stage，浮层每边留了 4%，永远不会露边。
+   stage 自己有 overflow: hidden，也不会溢到界面外面去。 */
+.board-stage::before {
+  position: absolute;
+  inset: -4%;
+  /* 远海：海图本体 + 一层深水色。深水色中心和岛屿那片浅水重合的地方是透明的，
+     越往外越沉 —— 和棋盘里那圈"近海浅水"合起来就是近浅远深的色差。 */
+  background-image:
+    radial-gradient(
+      ellipse 64% 58% at 50% 46%,
+      rgba(22, 58, 70, 0) 0%,
+      rgba(22, 58, 70, 0.16) 58%,
+      rgba(18, 50, 64, 0.34) 100%
+    ),
+    url("./assets/board-sea.webp?v=3");
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  content: "";
+  pointer-events: none;
+  will-change: transform;
+  animation:
+    sea-drift 84s ease-in-out infinite alternate,
+    sea-glow 23s ease-in-out infinite;
+}
+
+/* 海图上的波浪线是横的：以前让整张画横着滑，看起来就是"波浪在滚"。
+   现在改成以纵向为主、横向只留一点点 —— 越过线条方向地起伏，才像一整片水在动。
+   位移 ±2.8% / ±0.8%（相对浮层）= 2.9% / 0.83% of stage，浮层每边留 4%，不会露边。 */
+@keyframes sea-drift {
+  from {
+    transform: translate3d(-0.8%, -2.8%, 0);
+  }
+  to {
+    transform: translate3d(0.8%, 2.8%, 0);
+  }
+}
+
+/* 明暗呼吸：幅度压在 3% 以内，只是让水面有点"光在移动"的意思，不闪 */
+@keyframes sea-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.975;
+  }
+}
+
+/* ---------- 远近景深 ----------
+   四周微微压暗，视线自然收回棋盘中心。真实的边缘虚化得用 backdrop-filter，
+   而它每帧都要重新采样背后的画面 —— 海面正在慢慢漂，那正好是最不该做的开销。
+   所以这里只用一层静态径向渐变：暗下来本身就够把注意力收拢，而且画一次就不管了。
+   z-index 1 卡在中间：压在海面和棋盘上，但在工具条(7)、底槽(8)、结算牌(12)之下，
+   所以外围是暗的，要点的东西照样清楚。 */
+.board-stage::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: radial-gradient(
+    /* 半径按 stage 的一半来量：太大（比如 122%）的话，画面上真正的四角
+       连渐变的一半都没走到，等于没压暗 —— 第一版就是这么白做的。 */
+    82% 82% at 50% 47%,
+    rgba(20, 28, 32, 0) 38%,
+    rgba(20, 28, 32, 0.12) 70%,
+    rgba(16, 24, 28, 0.26) 100%
+  );
+  content: "";
+  pointer-events: none;
+}
+
+#board {
+  filter: none;
+}
+
+/* ---------- 棋盘：墨线 + 莫兰迪地形 + 纸色令牌 ---------- */
+/* 近海浅水：绕着岛的一圈浅色水。
+   这件事不能画在棋盘 SVG 里 —— 岛的外接盒几乎顶满 viewBox，留白只有 0.8 个单位，
+   圈再大就会被切、整片海一起染浅，"远海"就没了。所以放到 canvas 层上：
+   它和 SVG 同心（board 是 xMidYMid meet 居中的），横向有 canvas 那么宽可以铺开。
+   代价是棋盘被拖动/缩放时这圈水不跟着走 —— 和压边、远海那两层一个性质。
+   它压在棋盘下面（::before 排在 SVG 之前，两边都是 z-index: auto）。 */
+.board-canvas::before {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 44% 64% at 50% 50%,
+    rgba(168, 222, 206, 0.44) 0%,
+    rgba(152, 208, 199, 0.32) 44%,
+    rgba(140, 196, 192, 0.14) 72%,
+    rgba(132, 188, 186, 0) 94%
+  );
+  content: "";
+  pointer-events: none;
+}
+
+/* 海岸的沙滩过渡：只沿岛的外圈铺（一条边只属于一个地块 = 轮廓边）。
+   沙带压在边的正中，地块后画会盖掉内侧一半，露出来的就是岸上的沙；
+   外面那条更宽更淡的当浅水沙脊。两条都不描边，边界交给地块自己的墨线。 */
+.shore-shelf {
+  stroke: rgba(216, 202, 166, 0.22);
+  stroke-width: 0.34;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.shore-sand {
+  stroke: #d6c39a;
+  stroke-width: 0.17;
+  stroke-linecap: round;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* 地块投影：往右下偏，两层不同深度叠出软边（这套 viewBox 下不能用 filter）。
+   全部垫在地块下面，所以只会落进海里 —— 整座岛是一块浮起来的板。 */
+.hex-lift {
+  stroke: none;
+  pointer-events: none;
+}
+
+.hex-lift.is-far {
+  fill: rgba(46, 42, 34, 0.07);
+}
+
+.hex-lift.is-near {
+  fill: rgba(46, 42, 34, 0.1);
+}
+
+/* 地块自己的内阴影：光源固定在左上，右下压深、左上提亮。
+   两条都是形状求差做出来的窄带（见 app.js 的 hexReliefPath）——
+   这个 viewBox 只有 10 个单位宽，drop-shadow 的偏移会被当成用户单位，
+   整块棋盘会炸成黑块，所以这里的"投影"一律不用 filter。颜色压得很淡。 */
+.hex-relief {
+  pointer-events: none;
+}
+
+.hex-relief.is-shade {
+  fill: rgba(46, 42, 34, 0.13);
+}
+
+.hex-relief.is-light {
+  fill: rgba(255, 250, 236, 0.16);
+}
+
+.hex-terrain {
+  stroke: rgba(46, 42, 34, 0.5);
+  stroke-width: 0.038;
+}
+
+.terrain-motif {
+  opacity: 0.82;
+}
+
+.terrain-motif .motif-fill {
+  stroke: rgba(46, 42, 34, 0.34);
+}
+
+.motif-forest .motif-fill {
+  fill: #54705a;
+}
+
+.motif-forest .motif-line {
+  stroke: #2e2a22;
+  stroke-width: 0.022;
+}
+
+.motif-hills .motif-fill {
+  fill: #946d51;
+}
+
+.motif-hills .motif-light {
+  fill: #c3a184;
+}
+
+.motif-pasture .motif-fill {
+  fill: #efeada;
+}
+
+.motif-pasture .motif-line {
+  stroke: #2e2a22;
+  stroke-width: 0.022;
+}
+
+.motif-fields .motif-fill {
+  fill: #d3b96c;
+}
+
+.motif-fields .motif-line {
+  stroke: #6b5a22;
+  stroke-width: 0.024;
+}
+
+.motif-mountains .motif-fill {
+  fill: #6f6d70;
+}
+
+.motif-mountains .motif-light {
+  fill: #ded7c0;
+}
+
+.motif-desert .motif-line {
+  stroke: #a2926a;
+  stroke-width: 0.03;
+}
+
+.number-token {
+  fill: #e8e2d0;
+  stroke: #2e2a22;
+  stroke-width: 0.026;
+}
+
+.number-token.high {
+  fill: #e8e2d0;
+  stroke: var(--seal);
+  stroke-width: 0.038;
+}
+
+.hex-number {
+  fill: #2e2a22;
+  font-family: var(--f-serif);
+}
+
+.hex-number.high {
+  fill: var(--seal-2);
+}
+
+.resource-mark {
+  fill: #564f3e;
+}
+
+.resource-mark.high {
+  fill: var(--seal-2);
+}
+
+.harbor-label {
+  fill: #2e2a22;
+  stroke: rgba(243, 235, 215, 0.92);
+  stroke-width: 0.03;
+}
+
+/* 港口牌：立在海岸边中点的羊皮纸小牌，细木压边，桅杆是木色短线 */
+.harbor-plate {
+  fill: #f3ebd7;
+  stroke: #4b3a27;
+  stroke-width: 0.026;
+}
+
+.harbor-mast {
+  stroke: #6b5136;
+  stroke-width: 0.05;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* 棋子：墨边 + 纸衬 + 玩家色（玩家色来自 src/core/constants.js） */
+.road-shadow {
+  stroke: rgba(46, 42, 34, 0.88);
+}
+
+.building-shadow {
+  fill: rgba(46, 42, 34, 0.5);
+}
+
+.building-shape {
+  stroke: rgba(232, 226, 208, 0.95);
+}
+
+.building-detail {
+  fill: rgba(46, 42, 34, 0.82);
+}
+
+.robber {
+  fill: #4a4132;
+  stroke: #e8e2d0;
+}
+
+/* 斗篷轮廓收细一点：0.04 个单位在 12px 的人形上是一圈厚白边，
+   糊成一团；0.022 才像一笔勾出来的边。 */
+.robber-cloak {
+  stroke-width: 0.022;
+}
+
+/* ---------- 落子三态：可放置 / 指到 / 已点过待确认 ----------
+   候选点统一画成“插座”：一层暖色底、一圈细墨线虚环、中心一个圆点。
+   类型只靠颜色区分（定居点用玩家色、城市 verd、强盗 seal），不做四种花样；
+   道路的候选点就是那条边本身，指到就收成实线，正好是放下去的样子。
+   棋盘 viewBox 只有 10 个单位宽，这里所有尺寸一律写用户单位，不用 rem/px。 */
+.placement-marker {
+  cursor: pointer;
+}
+
+/* 旧主题把候选点画成实心圆（自己的 fill + 整体 opacity + hover 变亮）。
+   现在候选点是一个组，外观全交给下面这套 .marker-*，这三条按组失效。 */
+.valid-target,
+.valid-road-target,
+.robber-target {
+  fill: none;
+  opacity: 1;
+  stroke: none;
+}
+
+.marker-base {
+  fill: rgba(150, 118, 74, 0.16);
+  opacity: 0;
+  transition: opacity var(--motion-quick) var(--ease-soft);
+}
+
+.marker-hit {
+  fill: none;
+  /* fill 是 none 也要接得住指针；命中圈比环大一圈，好点 */
+  pointer-events: all;
+}
+
+.marker-ring {
+  fill: none;
+  opacity: 0.5;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-width: 0.03;
+  transition: opacity var(--motion-quick) var(--ease-soft), stroke-width var(--motion-quick) var(--ease-soft);
+}
+
+.marker-dot {
+  opacity: 0.7;
+  pointer-events: none;
+  transition: opacity var(--motion-quick) var(--ease-soft);
+}
+
+.marker-city .marker-ring {
+  stroke: var(--verd);
+}
+
+.marker-city .marker-dot {
+  fill: var(--verd);
+}
+
+.marker-robber .marker-ring,
+.marker-road .marker-ring {
+  stroke: var(--seal);
+}
+
+/* 指到哪一格：环收成实线、略粗一点，底色浮上来，中心点提亮 */
+.placement-marker:hover .marker-base {
+  opacity: 0.72;
+}
+
+.placement-marker:hover .marker-ring,
+.placement-marker:hover .marker-dot {
+  opacity: 1;
+}
+
+.placement-marker:hover .marker-ring {
+  stroke-width: 0.044;
+}
+
+/* 钉住的那一个：底色铺满、环换成 seal 红，和 hover 区分开
+   （已经点过了，就差按确认牌） */
+.placement-marker.pinned .marker-base {
+  opacity: 1;
+}
+
+.placement-marker.pinned .marker-ring,
+.placement-marker.pinned .marker-dot {
+  opacity: 1;
+}
+
+.placement-marker.pinned .marker-ring {
+  stroke: var(--seal);
+  stroke-width: 0.05;
+}
+
+/* 道路：虚线是“这里可以放”，收实就是“放下去长这样” */
+.marker-road .marker-base {
+  display: none;
+}
+
+.marker-line {
+  fill: none;
+  opacity: 0.38;
+  pointer-events: none;
+  stroke-dasharray: 0.075 0.065;
+  stroke-linecap: round;
+  stroke-width: 0.075;
+  transition: opacity var(--motion-quick) var(--ease-soft), stroke-width var(--motion-quick) var(--ease-soft);
+}
+
+.placement-marker.marker-road:hover .marker-line,
+.placement-marker.marker-road.pinned .marker-line {
+  opacity: 0.95;
+  stroke-dasharray: none;
+  stroke-width: 0.105;
+}
+
+/* 道路只在指到/钉住的时候露出那个小环，平时整条边自己就是锚点 */
+.placement-marker.marker-road .marker-ring {
+  opacity: 0;
+}
+
+.placement-marker.marker-road:hover .marker-ring,
+.placement-marker.marker-road.pinned .marker-ring {
+  opacity: 1;
+}
+
+/* 幽灵件：指到的时候半透明，钉住之后实色，让人看清“就是这个位置” */
+.placement-ghost {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--motion-quick) var(--ease-soft);
+}
+
+.placement-ghost.is-pinned {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker-base,
+  .marker-ring,
+  .marker-dot,
+  .marker-line,
+  .placement-ghost {
+    transition: none;
+  }
+}
+
+/* ---------- 按钮与表单 ---------- */
+button {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--paper-3);
+}
+
+button.primary {
+  border-color: var(--seal-2);
+  background: var(--seal);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--seal-2);
+}
+
+button:focus-visible,
+summary:focus-visible {
+  outline: 2.4px solid var(--seal);
+  outline-offset: 2px;
+}
+
+/* 键盘聚焦的输入框也跟着走上面那套柔和棕晕：style.css 里
+   input/select:focus-visible 还挂着一条橙色硬描边，得在这里按掉，
+   否则鼠标点击是软的、Tab 进来又变硬边。 */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+button:disabled {
+  opacity: 1;
+  border-color: var(--paper-edge);
+  background: var(--paper-2);
+  color: var(--ink-2, #564f3e);
+}
+
+.new-game input,
+.new-game select,
+.online-form input,
+.trade-form select,
+.trade-form input,
+.host-settings select,
+.host-settings input[type="number"],
+.trade-builder-row input {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ---------- 棋盘工具条、回合牌、提示条 ---------- */
+.board-toolbar,
+.turn-pill,
+.action-banner {
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.action-banner {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.board-tools button {
+  /* style.css 里这条是深海军蓝的 background 简写，优先级比全局 button 高，
+     所以要在这里把木浮雕重写一遍（简写会把木纹渐变一起清掉）。 */
+  background-color: var(--wood);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(87, 69, 47, 0.18)),
+    repeating-linear-gradient(92deg, rgba(46, 42, 34, 0.06) 0 1px, transparent 1px 6px);
+  /* 窗口收窄时"复位/规则/收起侧栏"会在词中间断行，压紧一点并禁止换行 */
+  padding: 0.34rem 0.5rem;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.board-tools {
+  flex-wrap: nowrap;
+}
+
+.turn-pill span {
+  color: var(--ink-2, #564f3e);
+}
+
+.turn-timer {
+  color: #5e6a3a;
+}
+
+.turn-timer.warning {
+  color: #8a6a2f;
+}
+
+.turn-timer.danger {
+  color: var(--seal-2);
+}
+
+/* ---------- 底槽 ---------- */
+.bottom-dock {
+  border: 0;
+  border-radius: 3px;
+  background: var(--wood-3);
+  box-shadow: var(--shadow);
+}
+
+.dock-section {
+  background-color: var(--wood);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(46, 42, 34, 0.14) 0 2px, transparent 2px 128px),
+    repeating-linear-gradient(92deg, rgba(46, 42, 34, 0.06) 0 1px, transparent 1px 6px);
+}
+
+.dock-label,
+.build-actions button small,
+.build-hint {
+  color: var(--ink-2, #564f3e);
+}
+
+.dock-label {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.dice-display {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-serif);
+  font-weight: 600;
+}
+
+.build-actions button {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.build-actions button.selected {
+  border-color: var(--seal);
+  background: var(--paper);
+  box-shadow: inset 4px 0 0 var(--seal);
+}
+
+/* 手牌：纸底墨框，张数放大 */
+.hand-tile {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.hand-tile strong {
+  font-family: var(--f-serif);
+  font-size: 1.05em;
+}
+
+.hand-tile small,
+.hand-tile.spectator-tile {
+  color: var(--ink-2, #564f3e);
+}
+
+/* ---------- 右侧信息栏 ---------- */
+.side-panel {
+  border-left: 1.8px solid var(--ink);
+  background-color: var(--paper);
+  background-image:
+    repeating-linear-gradient(115deg, rgba(46, 42, 34, 0.018) 0 2px, transparent 2px 11px),
+    radial-gradient(90% 40% at 100% 0%, rgba(122, 97, 66, 0.1), transparent 60%);
+  box-shadow: none;
+}
+
+.side-tabs {
+  border-bottom: 1.6px solid var(--ink);
+  background: var(--paper-2);
+}
+
+.side-tab {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-2, #564f3e);
+}
+
+.side-tab:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--paper-3);
+}
+
+.side-tab.active {
+  border-color: transparent;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: inset 0 3px 0 var(--seal);
+}
+
+.side-section,
+.host-settings,
+.special-controls {
+  border-color: rgba(46, 42, 34, 0.28);
+}
+
+.side-heading span,
+.online-panel summary small,
+.online-form label,
+.trade-form label,
+.new-game label,
+.host-settings label,
+.resource-choice span,
+.development-card-row span,
+.trade-builder-head,
+.player-meta,
+.event-log time,
+.history-status,
+.match-history-row span,
+.replay-meta,
+.empty-state {
+  color: var(--ink-2, #564f3e);
+}
+
+.copy-status {
+  color: var(--verd);
+}
+
+.host-settings-title,
+.special-summary {
+  color: var(--seal-2);
+}
+
+.online-seats,
+.players {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper-3);
+}
+
+/* 侧栏里的行不做成一个个盒子：改成发丝分隔 + 极淡底色，
+   否则一整页嵌套边框会把界面切成网格 */
+.online-seat,
+.player-row,
+.match-history-row,
+.development-card-row,
+.online-control-row {
+  border: 1px solid rgba(46, 42, 34, 0.2);
+  border-radius: 3px;
+  background: rgba(232, 226, 208, 0.55);
+  color: var(--ink);
+}
+
+/* 筹码是独立的物件，保留清晰的墨框 */
+.resource-chip {
+  border: 1.3px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.player-row.current {
+  background: var(--paper);
+  box-shadow: inset 3px 0 0 var(--seal);
+}
+
+.swatch {
+  border: 1.4px solid var(--ink);
+}
+
+.trade-builder-row span,
+.event-log li {
+  color: var(--ink);
+}
+
+.spectator-chip {
+  border: 1.3px solid rgba(94, 133, 122, 0.6);
+  border-radius: 3px;
+  background: rgba(94, 133, 122, 0.14);
+  color: #3f5f56;
+}
+
+.spectator-chip.empty {
+  border-color: var(--paper-edge);
+  background: var(--paper-2);
+  color: var(--ink-2, #564f3e);
+}
+
+/* ---------- 弹窗与结算 ---------- */
+.modal {
+  background: rgba(46, 42, 34, 0.62);
+}
+
+.modal-content {
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: 4px 4px 0 rgba(46, 42, 34, 0.32);
+}
+
+.modal-content ul {
+  color: var(--ink);
+}
+
+.completion {
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.replay-event-detail {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.replay-event-list li.active {
+  border-left-color: var(--seal);
+  background: rgba(163, 69, 59, 0.1);
+  color: var(--ink);
+}
+
+/* ---------- 资源图记与骰子 ----------
+   app.js 现在画的是墨线 symbol，不再是 emoji 字符 */
+.res-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.14em;
+  color: inherit;
+}
+
+.res-icon-hand {
+  width: 1.7em;
+  height: 1.7em;
+}
+
+.hand-tile span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 骰子：两只纸骰加点数。掷骰时先翻滚再落点，不再直接印数字 */
+.dice-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.dice-display.rolling {
+  animation: none;
+}
+
+.dice-face {
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: none;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+.dice-face circle {
+  fill: var(--ink);
+}
+
+/* ---------- 房间面板：把同等显眼的按钮拆出层级 ----------
+   问题不是按钮多余，而是十来个按钮一样重，玩家不知道先点哪个。
+   做法：连接只留一个主按钮，次要从宽按钮降为文字链接，
+   房主设置整块收进折叠区，禁用按钮明显退后。 */
+.online-form > .online-grid {
+  grid-column: 1 / 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.online-wide {
+  grid-column: 1 / 3;
+}
+
+.online-links {
+  grid-column: 1 / 3;
+  display: flex;
+  gap: 0.9rem;
+  justify-content: center;
+  padding-top: 0.1rem;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0.1rem 0;
+  color: var(--ink-2);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(46, 42, 34, 0.35);
+}
+
+.link-button:hover:not(:disabled) {
+  border: 0;
+  background: none;
+  color: var(--seal-2);
+  text-decoration-color: currentColor;
+}
+
+.online-bot-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.65rem 0 0;
+  color: var(--ink-2);
+  font-size: 0.76rem;
+}
+
+.online-bot-difficulty select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 只有可点的按钮才占满整行：视觉重量由状态自己决定 */
+.online-actions #online-start:not(:disabled),
+.online-actions #online-ready:not(:disabled) {
+  grid-column: 1 / 3;
+}
+
+/* 禁用按钮明显退后，避免"满屏都是按钮" */
+button:disabled,
+.build-actions button:disabled,
+.online-actions button:disabled {
+  border-color: rgba(46, 42, 34, 0.16);
+  background: rgba(232, 226, 208, 0.4);
+  color: rgba(86, 79, 62, 0.55);
+}
+
+/* 房主设置：默认收起，需要时才展开 */
+details.host-settings {
+  display: block;
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(46, 42, 34, 0.28);
+  padding-top: 0.5rem;
+}
+
+details.host-settings > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+details.host-settings > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.host-settings > summary::before {
+  content: "▸";
+  color: var(--ink-3);
+  font-size: 0.7rem;
+}
+
+details.host-settings[open] > summary::before {
+  content: "▾";
+}
+
+details.host-settings > summary span {
+  color: var(--ink-3);
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+
+.host-settings-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.host-settings-body label {
+  color: var(--ink-2);
+}
+
+/* ---------- 手牌：上面是缩略风景，下面是张数与名称 ---------- */
+.hand-tile {
+  /* 手牌和发展卡共用 --hand-tile-h：两行等高，抽到发展卡时工具条不跳 */
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 0.08rem;
+  height: var(--hand-tile-h);
+  min-height: 0;
+  padding: 0.18rem 0.22rem 0.22rem;
+}
+
+.hand-scene {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 2px;
+}
+
+.hand-tile strong {
+  margin-top: 0.04rem;
+  font-family: var(--f-serif);
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.hand-tile small {
+  font-size: 0.56rem;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- 手牌区：资源在上，发展卡在下，中间一条墨线 ---------- */
+.hand-section {
+  --hand-tile-h: 4.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  /* 高度预算：棋盘 .board-canvas 底部预留 13.5rem，工具条 bottom:1rem，
+     整条不能超过 200px。实际内容约 199px，加 bottom:1rem 是 215px，还在预算里。
+     资源行和发展行共用 --hand-tile-h，发展行空着也占位，
+     所以抽到发展卡时这一格高度不变，整条工具条不会往上跳。 */
+  min-height: 12.4rem;
+}
+
+.hand-dock,
+.dev-hand-dock {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 0.3rem;
+}
+
+.hand-dock::-webkit-scrollbar,
+.dev-hand-dock::-webkit-scrollbar {
+  height: 3px;
+}
+
+.hand-dock::-webkit-scrollbar-thumb,
+.dev-hand-dock::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background: rgba(46, 42, 34, 0.28);
+}
+
+.hand-rule {
+  /* 分隔线自己带标签，省掉一整行，底槽高度更容易锁死 */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.12rem 0 0.06rem;
+  background: none;
+}
+
+.hand-rule::before {
+  content: "发展卡";
+  flex: none;
+  color: var(--ink-2);
+  font-size: 0.6rem;
+}
+
+.hand-rule::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1.4px;
+  background: rgba(46, 42, 34, 0.4);
+}
+
+/* 只有需要选资源（垄断）时才出现那一行选择按钮 */
+#dev-hand-hint:not(:has(button)) {
+  display: none;
+}
+
+.dev-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+  min-height: 0.85rem;
+  color: var(--ink-2);
+  font-size: 0.62rem;
+}
+
+.dev-hint-caption {
+  margin-right: 0.1rem;
+}
+
+.dev-hand-dock {
+  gap: 0.3rem;
+  min-height: var(--hand-tile-h);
+}
+
+.hand-tile.dev-card {
+  /* 和资源手牌同一套尺寸：一样的高度，一样占行宽的 1/5 */
+  height: var(--hand-tile-h);
+  min-height: 0;
+  flex: 1 1 0;
+  max-width: calc((100% - 1.2rem) / 5);
+  gap: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0.16rem;
+}
+
+.dev-card-art {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  color: var(--ink);
+}
+
+.hand-tile.dev-card small {
+  font-size: 0.48rem;
+  line-height: 1.1;
+}
+
+/* 可打出的牌描铜绿边；刚买到的整张退后；要选资源的用虚线边提示 */
+.hand-tile.dev-card.playable {
+  border-color: var(--verd);
+  box-shadow: inset 0 0 0 1px var(--verd);
+  cursor: pointer;
+}
+
+.hand-tile.dev-card.playable:hover {
+  background: rgba(94, 133, 122, 0.14);
+}
+
+.hand-tile.dev-card.choosing {
+  border-style: dashed;
+}
+
+.hand-tile.dev-card.fresh {
+  opacity: 0.6;
+}
+
+.dev-pick {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.dev-pick .res-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+
+/* ---------- 交易：两行筹码取代原来的五行双列 ---------- */
+.trade-builder-row {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.trade-builder-caption {
+  flex: 0 0 2.4rem;
+  color: var(--ink-2);
+  font-size: 0.68rem;
+}
+
+.trade-chip {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 0.08rem;
+  min-width: 0;
+  padding: 0.06rem 0.12rem;
+  border: 1px solid rgba(46, 42, 34, 0.32);
+  border-radius: 2px;
+  background: var(--paper);
+}
+
+.trade-chip-icon {
+  width: 0.86rem;
+  height: 0.86rem;
+  flex: none;
+}
+
+/* 筹码太窄放不下图标，用单字标记：木 砖 羊 麦 矿 */
+.trade-chip-mark {
+  flex: none;
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.dev-pick {
+  color: var(--ink);
+  font-size: 0.62rem;
+}
+
+/* ---------- 输入类控件 ----------
+   原生 select／input 会保留系统外观（白底、系统箭头），和羊皮纸放一起很违和。
+   这里统一去掉系统外观，换成纸面墨框加一支墨色小箭头。 */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+select:focus,
+textarea:focus {
+  /* 聚焦不要外挂一圈蜡红描边 —— 它和细边框叠在一起就是"双层边框"。
+     改成内框自己变深棕（平时是 0.4 透明度），外面只留一层很淡的棕晕。
+     这条以前只写在房间面板和创建房间弹窗上，交易弹窗的步进器和银行下拉
+     一进来就露馅了，所以挪到全局。 */
+  outline: none;
+  border-color: rgba(75, 58, 39, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(75, 58, 39, 0.06),
+    0 0 8px 1px rgba(75, 58, 39, 0.22);
+}
+
+select {
+  padding-right: 1.5rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.82rem) calc(50% + 1px),
+    calc(100% - 0.52rem) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ---------- 木框纸牌按钮 ----------
+   参考图的做法：羊皮纸面 + 厚木边框 + 四角铆钉 + 墨线图标与宋体标签。
+   只在首页用，游戏内的密集控件保持轻量，避免到处都在"咚咚"响。 */
+.tablet {
+  --tablet-frame: inset 0 0 0 9px var(--wood), inset 0 0 0 10.4px var(--ink),
+    0 0 0 1.6px var(--ink);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.15rem;
+  border: 0;
+  border-radius: 3px;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 11px 11px, var(--paper) 0 1.5px, var(--ink) 1.6px 3.3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 11px) 11px, var(--paper) 0 1.5px, var(--ink) 1.6px 3.3px, transparent 3.5px),
+    radial-gradient(circle at 11px calc(100% - 11px), var(--paper) 0 1.5px, var(--ink) 1.6px 3.3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), var(--paper) 0 1.5px, var(--ink) 1.6px 3.3px, transparent 3.5px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(122, 97, 66, 0.12));
+  box-shadow: var(--tablet-frame), 4px 4px 0 rgba(46, 42, 34, 0.3);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform var(--motion-quick) var(--ease-soft), box-shadow var(--motion-quick) var(--ease-soft);
+}
+
+.tablet:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tablet-frame), 6px 7px 0 rgba(46, 42, 34, 0.3);
+}
+
+.tablet:active {
+  transform: translateY(1px);
+  box-shadow: var(--tablet-frame), 2px 2px 0 rgba(46, 42, 34, 0.3);
+}
+
+.tablet:focus-visible {
+  outline: 2.4px solid var(--seal);
+  outline-offset: 4px;
+}
+
+.tablet-icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--ink);
+}
+
+.tablet-label {
+  display: grid;
+  gap: 0.18rem;
+  font-family: var(--f-serif);
+  font-size: 1.14rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.tablet-label small {
+  color: var(--ink-2);
+  font-family: var(--f-sans);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tablet {
+    transition: none;
+  }
+  .tablet:hover,
+  .tablet:active {
+    transform: none;
+  }
+}
+
+/* ---------- 从首页进来时收掉已经不需要的组件 ----------
+   设置（名称、人机数量、难度）已经在首页给过，顶栏那一排就不用再占位；
+   人机对局不需要房间页签，联机对局则直接落在房间页签上。 */
+body[data-launch-mode="solo"] .new-game,
+body[data-launch-mode="online"] .new-game {
+  display: none;
+}
+
+body[data-launch-mode="solo"] .side-tab[data-sidebar-tab="room"],
+body[data-launch-mode="solo"] #sidebar-room {
+  display: none;
+}
+
+/* ---------- 大卡详版 ----------
+   悬停手牌时从底槽上方浮出：卡面是插画，下面是牌名、分隔线与规则。
+   用的是概念稿里那套大卡比例（宽高比 0.70）。 */
+.card-detail {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  /* 悬停大卡停在工具条上方：工具条最高 12.4rem 且 bottom:1rem，
+     13.8rem 留出约 0.4rem 缝，两者高度怎么变都不会压到一起。 */
+  bottom: 13.8rem;
+  transform: translateX(-50%);
+}
+
+.card-lg {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
+  gap: 0.4rem;
+  width: 15rem;
+  height: 21.5rem;
+  margin: 0;
+  padding: 0.75rem 0.9rem 0.9rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--paper);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34),
+    rgba(122, 97, 66, 0.1)
+  );
+  box-shadow: 6px 6px 0 rgba(46, 42, 34, 0.34);
+  color: var(--ink);
+}
+
+.card-lg-window {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 1.2px solid rgba(46, 42, 34, 0.5);
+  border-radius: 2px;
+  background-color: var(--paper-2);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.card-lg-name {
+  margin: 0;
+  font-family: var(--f-serif);
+  font-size: 1.32rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.card-lg .card-rule {
+  width: 62%;
+  height: 1.5px;
+  margin: 0 auto;
+  background: var(--ink);
+  opacity: 0.5;
+}
+
+.card-lg-text {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
+
+/* 结算浮层头图：图片不存在时只是空纸底，不会出现裂图 */
+.completion-art {
+  height: 8.5rem;
+  margin: 0 0 0.85rem;
+  border: 1.2px solid var(--ink);
+  border-radius: 2px;
+  background-color: var(--paper-2);
+  background-image: url("./assets/results-hero.webp");
+  background-position: center;
+  background-size: cover;
+}
+
+.completion-text {
+  margin: 0;
+}
+
+/* ---------- 落子二次确认牌 ----------
+   浮在高亮位上方的纸牌：一行说明加两个按钮，主操作封蜡红，取消是纸底。 */
+.placement-confirm {
+  position: fixed;
+  z-index: 30;
+  transform: translate(-50%, -100%);
+  display: grid;
+  gap: 0.34rem;
+  padding: 0.4rem 0.46rem 0.44rem;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--paper);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.36),
+    rgba(122, 97, 66, 0.1)
+  );
+  box-shadow: 3px 3px 0 rgba(46, 42, 34, 0.3);
+}
+
+.placement-confirm p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.66rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.placement-confirm-actions {
+  display: flex;
+  gap: 0.32rem;
+}
+
+.placement-confirm-actions button {
+  padding: 0.24rem 0.56rem;
+  font-size: 0.72rem;
+}
+
+/* ---------- 按钮体系 ----------
+   之前所有按钮都落在同一条通用规则上，于是"清一色"，看不出哪个是主要动作。
+   这里给五种语气 × 三档尺寸。语气靠描边与文字色区分，不靠整块填充，
+   这样一屏里同时出现三四个按钮也不会吵。
+
+   语气（修饰类，可与尺寸叠加）：
+     .btn-primary  封蜡红实底，一屏最多一个
+     .btn-yes      铜绿描边，用于"准备好 / 接受 / 确认"
+     .btn-no       封蜡红描边，用于"拒绝 / 移除 / 踢出"
+     .btn-warn     赭黄描边，用于"暂停 / 提醒"
+     .btn-quiet    无边框纯文字，用于"取消 / 关闭 / 查看"
+   尺寸：.btn-xs  .btn-sm  （不写即默认）  .btn-lg */
+
+:root {
+  --btn-yes: #5e857a;
+  --btn-no: #a3453b;
+  --btn-warn: #8a6a2f;
+}
+
+button.btn-yes,
+.btn-yes {
+  border-color: var(--btn-yes);
+  background: rgba(94, 133, 122, 0.13);
+  color: #3f5f56;
+  font-weight: 600;
+}
+
+button.btn-no,
+.btn-no {
+  border-color: var(--btn-no);
+  background: rgba(163, 69, 59, 0.1);
+  color: var(--seal-2);
+  font-weight: 600;
+}
+
+button.btn-warn,
+.btn-warn {
+  border-color: var(--btn-warn);
+  background: rgba(138, 106, 47, 0.12);
+  color: #6f5525;
+  font-weight: 600;
+}
+
+button.btn-quiet,
+.btn-quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-2);
+}
+
+button.btn-quiet:hover:not(:disabled) {
+  border-color: rgba(46, 42, 34, 0.35);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+button.btn-xs {
+  padding: 0.18rem 0.38rem;
+  font-size: 0.68rem;
+}
+
+button.btn-sm {
+  padding: 0.26rem 0.48rem;
+  font-size: 0.74rem;
+}
+
+button.btn-lg {
+  padding: 0.52rem 0.9rem;
+  font-size: 0.92rem;
+}
+
+/* 所有按钮按下都下沉 1px，让点击有手感（原来只有主要按钮有） */
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* ---------- 把语气落到现有按钮上 ----------
+   不改任何标记，只按 id／语境给它们各自的语气与尺寸。 */
+#online-ready:not(:disabled) {
+  border-color: var(--btn-yes);
+  background: rgba(94, 133, 122, 0.13);
+  color: #3f5f56;
+  font-weight: 600;
+}
+
+#online-remove-bot:not(:disabled),
+#toggle-room-pause:not(:disabled),
+#online-spectator-controls button:last-child {
+  border-color: var(--btn-no);
+  background: rgba(163, 69, 59, 0.1);
+  color: var(--seal-2);
+}
+
+#replay-toggle:not(:disabled) {
+  border-color: var(--seal-2);
+  color: var(--seal-2);
+  font-weight: 600;
+}
+
+#open-match-history,
+#open-replay,
+#close-sidebar,
+.side-close {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-2);
+  padding: 0.2rem 0.36rem;
+  font-size: 0.72rem;
+}
+
+#open-match-history:hover:not(:disabled),
+#open-replay:hover:not(:disabled),
+#close-sidebar:hover:not(:disabled),
+.side-close:hover:not(:disabled) {
+  border-color: rgba(46, 42, 34, 0.35);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.replay-controls button,
+.online-control-row button {
+  padding: 0.24rem 0.48rem;
+  font-size: 0.72rem;
+}
+
+.board-tools button {
+  font-weight: 600;
+}
+
+/* ---------- 按钮底板（可选装饰） ----------
+   底图是 assets/btn-plate*.webp：512 见方的木框空牌，四边各占约 17%。
+   挂到按钮上（例如 class="primary btn-plate"）用九宫格拉伸，
+   底图四角透明，所以按钮自己不能再铺 background / border-radius，
+   否则牌匾的圆角外会露出底色方块。首页那两张牌匾在 home.css 里单独写。 */
+.btn-plate {
+  /* 匾芯底色：切片不写 fill，中央交给 CSS，换淡色只改这一个变量 */
+  --plate-face: var(--paper);
+  /* border-image-width 只决定底图往内画多厚，不占盒模型尺寸，
+     所以挂上去既不会把按钮撑大，也不会挤动同一行的其它控件。 */
+  /* 1.4px 就是皮肤给 button 的边框宽度，照抄是为了不改变按钮占位 */
+  border: 1.4px solid transparent;
+  border-image-source: url("./assets/btn-plate.webp?v=21");
+  border-image-slice: 17.2%;
+  border-image-repeat: stretch;
+  border-image-width: 8px;
+  border-radius: 0;
+  box-shadow: 2px 2px 0 rgba(46, 42, 34, 0.3);
+}
+
+/* 带 .primary 的按钮在 style.css 里是蜡红实底 + 浅色字，这里必须压掉：
+   底图四角是透明的，透出红底会在牌匾四角露出方块；浅色字落在纸面上也读不出来。
+   同理还有 button.primary 的蜡红描边（0,1,1），它压得过 .btn-plate 的透明边框
+   （0,1,0），会在木框外面再套一圈暗红线，看着像双层边框——「连接服务器」就是
+   被这条描边搞得突兀的。所以这里用 (0,2,0) 把边框一并置透明。 */
+.btn-plate,
+.btn-plate.primary {
+  background-color: var(--plate-face);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+.btn-plate.btn-plate-wide {
+  border-image-width: 15px;
+}
+
+.btn-plate.btn-plate-narrow {
+  border-image-width: 7px;
+}
+
+/* 换底板配色用 .btn-seal / .btn-verd，不要复用原有的 .primary */
+.btn-plate.btn-seal {
+  --plate-face: #efe1d9;
+  border-image-source: url("./assets/btn-plate-primary.webp?v=21");
+  /* 蜡红上近黑墨约 4.9:1；原来的深棕只有 4.2:1，小字会糊 */
+  color: #211d16;
+}
+
+.btn-plate.btn-verd {
+  --plate-face: #e4e9e2;
+  border-image-source: url("./assets/btn-plate-yes.webp?v=21");
+}
+
+.btn-plate:hover:not(:disabled) {
+  /* 压掉纸片按钮的 hover 底色：底图四角是透明的，透出底色会露出方块 */
+  background-color: var(--plate-face);
+  background-image: none;
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(46, 42, 34, 0.36);
+}
+
+.btn-plate:active:not(:disabled) {
+  background-color: var(--plate-face);
+  background-image: none;
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 rgba(46, 42, 34, 0.34);
+}
+
+/* 带上 button 是为了压过 .online-actions button:disabled 那条禁用底色 */
+button.btn-plate[disabled],
+.btn-plate[disabled] {
+  /* 0.55 是权衡：再淡就压在半透匾面上几乎看不见，再深就不像"不可点" */
+  opacity: 0.55;
+  background-color: var(--plate-face);
+  background-image: none;
+  box-shadow: none;
+}
+
+.trade-chip .trade-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.04rem;
+  min-width: 0;
+}
+
+.trade-chip .trade-stepper button {
+  width: 1.02rem;
+  height: 1.02rem;
+  padding: 0;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+/* 这里的数字不是"输入框"，是牌面上印的数字：要去掉全局 input 规则给的墨框和纸底。
+   上面那条全局规则带三个 :not()，优先级 (0,3,1)，所以这里必须把同样的 :not() 链
+   写一遍（变成 (0,5,1)）才压得过，否则数字外面会一直留一个突兀的方框。 */
+.trade-chip .trade-stepper input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  width: 1.15rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+#bank-trade-form label {
+  font-size: 0.68rem;
+}
+
+#bank-trade-form select {
+  padding: 0.22rem 0.3rem;
+  font-size: 0.74rem;
+}
+
+/* 只留给侧栏那张兑换表：它挤在两个下拉框下面，要用小一号的字体和间距。
+   #create-trade-button 已经搬到交易弹窗，别再跟着缩 —— 否则和旁边的
+   「清空」并排时一大一小。 */
+#bank-trade-button {
+  padding: 0.34rem 0.5rem;
+  font-size: 0.76rem;
+}
+
+/* ---------- 底槽质感 ----------
+   上一版给每一格加内阴影做"隔间"，结果像塑料壳，这是错的。
+   概念稿的答案很简单：一整块木面，只靠墨色发丝线分格，纸件只描墨边、不投影。 */
+.bottom-dock {
+  /* 外壳整条透明，不再是一条木头横梁；三格各自成为一块匾额浮在棋盘上 */
+  overflow: visible;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  gap: 0.5rem;
+}
+
+/* 匾芯用半透纸面，而不是全透明：这一条压在棋盘和海面上，建造消耗那种
+   9.4px 小字如果直接落在木色上，对比度会掉到 2:1 以下读不出来。0.78 的
+   纸色既透出底色，又把墨字稳在 9:1 以上。想更透就改这一处的 alpha。 */
+.dock-section {
+  --dock-face: rgba(232, 226, 208, 0.78);
+  border: 1.4px solid transparent;
+  border-image-source: url("./assets/btn-plate.webp?v=21");
+  border-image-slice: 17.2%;
+  border-image-repeat: stretch;
+  border-image-width: 9px;
+  border-radius: 0;
+  background-color: var(--dock-face);
+  background-image: none;
+  box-shadow: 2px 2px 0 rgba(46, 42, 34, 0.28);
+}
+
+/* 上面那条"纸片化"把投影取消了，底板按钮要自己把硬边投影要回来 */
+/* 底栏第一格是「骰面 + 两个按钮」两列。原主题给两列都留了硬最小值
+   （7rem + 8rem + 0.55rem 间距 = 249px），可这一格在宽屏下只有 241px，
+   于是按钮往右溢出 21px、压到建造面板上。放开最小值让它按比例缩。 */
+.dice-section {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+}
+
+.turn-actions .btn-plate {
+  box-shadow: 2px 2px 0 rgba(46, 42, 34, 0.3);
+}
+
+.turn-actions .btn-plate:hover:not(:disabled) {
+  box-shadow: 3px 3px 0 rgba(46, 42, 34, 0.36);
+}
+
+.turn-actions .btn-plate:active:not(:disabled) {
+  box-shadow: 1px 1px 0 rgba(46, 42, 34, 0.34);
+}
+
+.turn-actions .btn-plate[disabled] {
+  box-shadow: none;
+}
+
+/* 纸件：只留墨边与纸面，取消上一版那道硬边投影 */
+.build-actions button,
+.turn-actions button {
+  box-shadow: none;
+}
+
+.build-actions button.selected {
+  background-color: var(--paper-2);
+  box-shadow: inset 4px 0 0 var(--seal);
+}
+
+button.primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.dice-face {
+  box-shadow: none;
+}
+
+/* =========================================================
+   全局统一：羊皮纸底 / 木浮雕按钮 / 弹窗与提示 / 网络状态
+   ========================================================= */
+
+:root {
+  /* 羊皮纸纹理砖，256px 无缝平铺；生成见 scripts/art-paper-tile.py */
+  --paper-tex: url("./assets/paper-tile.webp?v=3");
+  /* 成功与错误两种墨色，都从现有调色板里取，不跳出风格 */
+  --ok-ink: #4f6b34;
+  --err-ink: #8b392f;
+}
+
+/* ---------- 1. 页面底色与大面积纸面 ----------
+   平涂的 #E8E2D0 在屏幕上就是"发白"：侧栏 31 万 px²、三块工具格 20 万 px²、
+   工具栏 7 万 px² 是最亮的几块平涂面，统一铺纹理砖。 */
+body {
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+}
+
+.side-panel,
+.side-tabs,
+.board-toolbar,
+.turn-pill,
+.action-banner,
+.modal-content,
+.completion,
+.placement-confirm,
+.card-detail,
+.replay-event-detail {
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+}
+
+/* 工具格原来是 rgba(...,0.78) 半透纸色。铺纹理后变实底 —— 它底下是海图的浅色区，
+   透出来的差别肉眼看不出来，换来的是不再是一块平涂。 */
+.dock-section {
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+}
+
+/* ---------- 2. 字体：标题衬线，正文无衬线 ---------- */
+h1,
+h2,
+h3,
+h4,
+.side-heading h2,
+.modal-content h2,
+.completion h2,
+.replay-modal-content h2,
+.host-settings-title,
+.brand strong,
+.turn-pill strong,
+.dock-label {
+  font-family: var(--f-serif);
+}
+
+/* ---------- 3. 按钮：木浮雕 + hover 上浮 + 禁用置灰 ---------- */
+button {
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--wood);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(87, 69, 47, 0.18)),
+    repeating-linear-gradient(92deg, rgba(46, 42, 34, 0.06) 0 1px, transparent 1px 6px);
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(87, 69, 47, 0.32),
+    2px 2px 0 rgba(46, 42, 34, 0.28);
+  transition:
+    transform var(--motion-quick) var(--ease-soft),
+    box-shadow var(--motion-quick) var(--ease-soft),
+    filter var(--motion-quick) var(--ease-soft);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(87, 69, 47, 0.32),
+    3px 4px 0 rgba(46, 42, 34, 0.34);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(87, 69, 47, 0.3),
+    1px 1px 0 rgba(46, 42, 34, 0.3);
+}
+
+/* 不可用一律置灰、去掉浮雕与投影，并且真的点不动 */
+button:disabled,
+.build-actions button:disabled,
+.online-actions button:disabled {
+  filter: grayscale(0.75) brightness(1.05);
+  opacity: 0.58;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 底板按钮自带木框，不要把这层木面叠进去 */
+.btn-plate,
+.btn-plate.primary {
+  background-image: none;
+}
+
+/* ---------- 4. 弹窗与提示：同一套羊皮纸 + 木框 ---------- */
+.modal-content,
+.completion,
+.placement-confirm,
+.card-detail {
+  border: 6px solid transparent;
+  border-image-source: url("./assets/btn-plate.webp?v=21");
+  border-image-slice: 17.2%;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  box-shadow: 5px 5px 0 rgba(46, 42, 34, 0.32);
+}
+
+/* 三种语气：普通墨色 / 成功墨绿 / 出错封蜡红 */
+.notice {
+  color: var(--ink);
+}
+
+.notice--ok,
+.action-banner.is-ok {
+  color: var(--ok-ink);
+}
+
+.notice--warn,
+.notice--error,
+.action-banner.is-error {
+  color: var(--err-ink);
+}
+
+.net-toast {
+  position: fixed;
+  z-index: 60;
+  top: 5.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.5rem 0.9rem 0.54rem;
+  border: 5px solid transparent;
+  border-image-source: url("./assets/btn-plate.webp?v=21");
+  border-image-slice: 17.2%;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+  box-shadow: 4px 4px 0 rgba(46, 42, 34, 0.32);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.net-toast[hidden] {
+  display: none;
+}
+
+/* ---------- 5. 右上角网络状态指示器 ---------- */
+.app-header {
+  /* 第 4 列留给状态牌：solo/online 模式下 .new-game 会隐藏，牌子仍在最右 */
+  grid-template-columns: 14rem minmax(20rem, 1fr) auto auto;
+}
+
+.net-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  /* 和「复位 / 规则」同一尺寸同一材质：同样的内边距、字号和木浮雕 */
+  padding: 0.34rem 0.5rem;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--wood);
+  background-image: var(--btn-face);
+  color: var(--ink);
+  font-size: 0.74rem;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(87, 69, 47, 0.32),
+    2px 2px 0 rgba(46, 42, 34, 0.28);
+}
+
+.net-dot {
+  width: 0.46rem;
+  height: 0.46rem;
+  flex: none;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background-color: var(--paper-3);
+}
+
+.net-status[data-state="online"] .net-dot {
+  background-color: var(--ok-ink);
+}
+
+.net-status[data-state="offline"] .net-dot {
+  background-color: var(--err-ink);
+}
+
+.net-status[data-state="connecting"] .net-dot,
+.net-status[data-state="reconnecting"] .net-dot {
+  background-color: #8a5f14;
+  animation: net-pulse 1s ease-in-out infinite;
+}
+
+@keyframes net-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* =========================================================
+   棋盘提示 / 地块 / 日志 / 建造卡 / 手牌
+   ========================================================= */
+
+/* ---------- 2. 棋盘悬浮提示：羊皮纸 + 细木边，替掉浏览器原生白气泡 ---------- */
+.board-tooltip {
+  position: fixed;
+  z-index: 70;
+  top: 0;
+  left: 0;
+  max-width: 16rem;
+  padding: 0.3rem 0.52rem 0.34rem;
+  border: 4px solid transparent;
+  border-image-source: url("./assets/wood-frame.webp?v=1");
+  border-image-slice: 64;
+  border-image-width: 4px;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+  box-shadow: 2px 2px 0 rgba(46, 42, 34, 0.26);
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.board-tooltip[hidden] {
+  display: none;
+}
+
+/* ---------- 3a. 港口：羊皮纸小牌，牌上写资源单字 + 兑换比例 ----------
+   牌面几何（位置、宽高）都在 app.js 里算，这里只管皮。
+   注意别给 SVG 里的文字写 px/rem 字号：棋盘 viewBox 只有 10 个单位宽，
+   CSS 的 1px 在 SVG 里等于 1 个用户单位，写 0.6rem 会把港口文字放大成整块棋盘。 */
+.harbor-label {
+  /* 比地块数字（0.28）小一档，仍要一眼认出「木2:1」。 */
+  font-size: 0.18px;
+  font-weight: 700;
+}
+
+/* ---------- 3b. 6 / 8 数字：柔和暗红小圆木牌，带轻微阴影 ---------- */
+.number-token.high {
+  fill: #8a4a3f;
+  stroke: #2e2a22;
+  stroke-width: 0.028;
+}
+
+.hex-number.high {
+  fill: #f4ece0;
+}
+
+.resource-mark.high {
+  fill: rgba(244, 236, 224, 0.8);
+}
+
+/* 3c / 3d 的发光与光晕走 app.js 里额外的 SVG 元素，不用 CSS filter：
+   棋盘 viewBox 只有 10 个单位，CSS drop-shadow 在这里会被算成错误的滤镜区域，
+   实测整块棋盘会被放大成一堆巨大黑块。 */
+.number-token-shadow {
+  fill: rgba(46, 42, 34, 0.24);
+}
+
+.road-glow {
+  stroke: rgba(255, 250, 236, 0.42);
+  stroke-linecap: round;
+}
+
+.building-glow {
+  fill: rgba(255, 250, 236, 0.3);
+}
+
+.robber-halo {
+  /* 两层同心圆叠出柔光衰减，圆心和斗篷的视觉中心对齐（见 app.js 的强盗段）。
+     这里必须关掉 stroke —— .robber 的纸色描边会继承下来，
+     在光斑外圈套一道浅边，看着像个盘子。 */
+  fill: rgba(26, 22, 16, 0.06);
+  stroke: none;
+}
+
+.robber-halo.is-inner {
+  fill: rgba(26, 22, 16, 0.09);
+}
+
+/* 脚下的地面影：让它"站"在地块上，而不是浮着 */
+.robber-shadow {
+  fill: rgba(26, 22, 16, 0.28);
+  stroke: none;
+}
+
+/* 帽兜里那张脸：亮面，别用暗色 —— 暗孔在 12px 的人形上等于没有 */
+.robber-cowl {
+  fill: #e8e2d0;
+  opacity: 0.92;
+  stroke: none;
+}
+
+/* ---------- 4. 侧栏记录：按事件类型上低饱和色，旧的降透明度，文本自动换行 ---------- */
+.event-log li {
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.event-log li span {
+  min-width: 0;
+}
+
+.event-log li[data-type="ROAD_PLACED"] span,
+.event-log li[data-type="SETTLEMENT_PLACED"] span,
+.event-log li[data-type="CITY_PLACED"] span,
+.event-log li[data-type="FREE_ROAD_PLACED"] span {
+  color: #4c5f70;
+}
+
+.event-log li[data-type="RESOURCES_GAINED"] span,
+.event-log li[data-type="RESOURCES_PRODUCED"] span {
+  color: #55683f;
+}
+
+.event-log li[data-type="RESOURCES_SPENT"] span,
+.event-log li[data-type="RESOURCES_DISCARDED"] span,
+.event-log li[data-type="RESOURCE_LOST"] span {
+  color: #8a6250;
+}
+
+.event-log li[data-type="ROBBER_MOVED"] span,
+.event-log li[data-type="RESOURCE_STOLEN"] span,
+.event-log li[data-type="STEAL_RESOLVED"] span,
+.event-log li[data-type="DISCARD_REQUIRED"] span {
+  color: var(--seal-2);
+}
+
+.event-log li[data-type="TRADE_CREATED"] span,
+.event-log li[data-type="TRADE_COMPLETED"] span,
+.event-log li[data-type="BANK_TRADE_COMPLETED"] span,
+.event-log li[data-type="TRADE_RESPONSE_RECORDED"] span {
+  color: #7a6340;
+}
+
+.event-log li[data-type="DEVELOPMENT_CARD_PURCHASED"] span,
+.event-log li[data-type="DEVELOPMENT_CARD_DRAWN"] span,
+.event-log li[data-type="DEVELOPMENT_CARD_PLAYED"] span {
+  color: #5e6a3a;
+}
+
+.event-log li[data-type="LONGEST_ROAD_CHANGED"] span,
+.event-log li[data-type="LARGEST_ARMY_CHANGED"] span,
+.event-log li[data-type="VICTORY_POINT_REVEALED"] span {
+  color: #4f6b5e;
+}
+
+.event-log li[data-type="DICE_ROLLED"] span {
+  color: #6b6350;
+}
+
+/* 越旧越淡：最新那条最实 */
+.event-log li:nth-child(n + 7) {
+  opacity: 0.8;
+}
+
+.event-log li:nth-child(n + 15) {
+  opacity: 0.6;
+}
+
+.event-log li:nth-child(n + 24) {
+  opacity: 0.42;
+}
+
+/* ---------- 5. 建造卡：羊皮纸 + 细木边；选中不用红框，只用浮雕阴影 ---------- */
+.build-actions button {
+  background-color: #e6dfc8;
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  background-repeat: repeat;
+  border-image-source: url("./assets/wood-frame.webp?v=1");
+  border-image-slice: 64;
+  border-image-width: 4px;
+  border-image-repeat: stretch;
+  border-radius: 0;
+}
+
+.build-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 3px 4px 0 rgba(46, 42, 34, 0.3);
+}
+
+/* 选中：外投影 + 内高光的浮雕表达，去掉了原来那条红色内阴影 */
+.build-actions button.selected {
+  border-color: transparent;
+  background-color: #f0e4c8;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 rgba(87, 69, 47, 0.3),
+    3px 4px 0 rgba(46, 42, 34, 0.34);
+}
+
+/* ---------- 7. 手牌：黑边换细木边，hover 上浮柔和阴影 ---------- */
+.hand-tile {
+  border-image-source: url("./assets/wood-frame.webp?v=1");
+  border-image-slice: 64;
+  border-image-width: 4px;
+  border-image-repeat: stretch;
+  border-radius: 0;
+}
+
+.hand-tile:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 3px 2px rgba(46, 42, 34, 0.26));
+}
+
+
+/* ---------- 补丁：把扫出来的三类非木色按钮补齐 ----------
+   页面上 35 颗按钮，改完第一版后仍有 20 颗不是木色，分三类：
+   禁用态(11)、弹窗关闭/战绩/回放这类"安静文字按钮"(7)、封蜡红主按钮(1)。
+   统一成同一套木浮雕构图，只换材质色，形状与光影保持一致。 */
+:root {
+  --btn-face:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(87, 69, 47, 0.18)),
+    repeating-linear-gradient(92deg, rgba(46, 42, 34, 0.06) 0 1px, transparent 1px 6px);
+}
+
+/* 禁用：材质仍是木头，只是整体脱色压暗，而不是换成另一种浅纸底 */
+button:disabled,
+.build-actions button:disabled,
+.online-actions button:disabled {
+  background-color: var(--wood);
+  background-image: var(--btn-face);
+}
+
+/* 侧栏标签 .side-tab 是导航不是动作，保持扁平；其余安静按钮并入木浮雕。
+   注意 #close-help / #close-replay 已经从这条里摘掉了 —— 它们是弹窗标题栏里的
+   关闭键，跟交易弹窗、创建房间弹窗的同位置按钮一样走细线，见下面"纸面上的按钮"那段。 */
+#open-match-history,
+#open-replay,
+#close-sidebar,
+.side-close,
+.link-button,
+#online-new-room,
+#spectate-online {
+  border-color: var(--ink);
+  background-color: var(--wood);
+  background-image: var(--btn-face);
+  color: var(--ink);
+}
+
+/* 主按钮仍是封蜡红；浮雕与木按钮同构，不再是平涂一块红 */
+button.primary {
+  background-color: var(--seal);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.16));
+  color: var(--paper);
+}
+
+/* =========================================================
+   面板与回合按钮：统一成同一块木头
+   ========================================================= */
+
+/* 面板边框换成专用 wood-frame.webp。旧边框是从按钮底板切的，沿边框方向有结疤，
+   241px 的骰子格会被压密、466px 的建造格会被拉长，看着像两种木头。
+   新边框的木纹细且沿边框走向，横向拉伸只是把线拉长，密度不变 ——
+   所以任意宽度的面板都是同一块木料，四角 64→8px 的铆钉也完全一致。 */
+.dock-section,
+.modal-content,
+.completion,
+.placement-confirm,
+.card-detail {
+  border-image-source: url("./assets/wood-frame.webp?v=1");
+  border-image-slice: 64;
+  border-image-width: 8px;
+  border-image-repeat: stretch;
+}
+
+/* 带 .primary 的底板按钮（例如「连接服务器」）hover 时会被
+   button.primary:hover:not(:disabled) 的 (0,3,1) 压过底板的 (0,3,0)，
+   于是整块变蜡红。这条把优先级提到 (0,4,0)，红底 hover 彻底去掉。 */
+.btn-plate.primary:hover:not(:disabled) {
+  background-color: var(--plate-face);
+  background-image: none;
+}
+
+/* 掷骰 / 结束回合：同一套小木牌组件，浅木底，不再有大面积红 */
+.turn-btn {
+  --plate-face: #e3d2b0;
+  font-weight: 600;
+  /* 换用工具格那张专用边框，并把厚度收到 5px。
+     原来用按钮底板图、8px：在只有 46px 高的按钮上，框就占了三分之一，
+     而且底板图四个角的铆钉被压成暗斑，很违和。 */
+  border-image-source: url("./assets/wood-frame.webp?v=1");
+  border-image-slice: 64;
+  border-image-width: 5px;
+  /* 立体感：光源固定在左上，所以左上给一条浅色高光、右下压一条深影，
+     再往外落一层硬边投影 —— 像从羊皮纸面板上浮起来。
+     边框（木框底图）和里面的米黄底不动，这里只加光影。
+     不用 filter/blur：这套界面的阴影全是硬边偏移，加了模糊反而不合群。 */
+  box-shadow:
+    inset 1.6px 1.6px 0 rgba(255, 253, 244, 0.5),
+    inset -1.6px -1.8px 0 rgba(87, 69, 47, 0.26),
+    2px 2px 0 rgba(46, 42, 34, 0.3);
+}
+
+/* 轮到自己、按钮可点：浮雕最强，高光和投影都提一档 */
+.turn-btn:not(:disabled) {
+  --plate-face: #ecd9b4;
+  box-shadow:
+    inset 1.8px 1.8px 0 rgba(255, 253, 244, 0.62),
+    inset -1.8px -2px 0 rgba(87, 69, 47, 0.3),
+    2px 3px 0 rgba(46, 42, 34, 0.32);
+}
+
+.turn-btn:hover:not(:disabled) {
+  --plate-face: #f1e1c2;
+  color: #1b1811;
+  transform: translateY(-2px);
+  box-shadow:
+    inset 1.8px 1.8px 0 rgba(255, 253, 244, 0.78),
+    inset -1.8px -2px 0 rgba(87, 69, 47, 0.34),
+    3px 5px 0 rgba(46, 42, 34, 0.34);
+}
+
+.turn-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  /* 按下去：高光翻到右下、投影收回，读起来是"压进去了" */
+  box-shadow:
+    inset -1.2px -1.4px 0 rgba(255, 253, 244, 0.3),
+    inset 1.6px 1.8px 0 rgba(87, 69, 47, 0.32),
+    1px 1px 0 rgba(46, 42, 34, 0.28);
+}
+
+/* 不可点：凸起减弱、整体下沉一点、文字变灰。
+   opacity 从全局 .btn-plate[disabled] 的 0.55 提回 0.72 ——
+   0.55 会把木框一起淡掉，"下沉"反而看不出来了。 */
+.turn-actions .turn-btn:disabled {
+  opacity: 0.72;
+  transform: translateY(1px);
+  color: rgba(86, 79, 62, 0.6);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 253, 244, 0.2),
+    inset -1px -1.2px 0 rgba(87, 69, 47, 0.14),
+    1px 1px 0 rgba(46, 42, 34, 0.14);
+}
+
+/* 未掷骰时的占位（骰面只在掷完之后出现） */
+.dice-idle {
+  color: var(--ink-2);
+  font-family: var(--f-serif);
+  font-size: 1.1rem;
+}
+
+/* =========================================================
+   进房入口 + 创建房间弹窗
+   面板收起成「连接服务器 / 创建房间」两个入口，人数、人机难度、观战、
+   计时这些配置搬进独立弹窗；两者都用同一套木牌按钮 + 羊皮纸控件。
+   ========================================================= */
+
+#online-entry {
+  gap: 0.55rem;
+}
+
+/* style.css 里有一条 `.online-form button { grid-column: auto }`（0,1,1），
+   会压过 `.online-wide`（0,1,0），两个入口就并排了；这里提到 (1,1,0) 让它们各占一行 */
+#online-entry .online-wide {
+  grid-column: 1 / 3;
+}
+
+#online-entry button {
+  min-height: 2.5rem;
+  font-weight: 600;
+}
+
+#online-room-view {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+/* 这一屏只有一个动作按钮，让它占满一行 */
+#online-room-view .online-actions {
+  grid-template-columns: 1fr;
+}
+
+/* 房间号一行：牌子 + 复制，方便发给一起玩的人 */
+.online-room-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-2, #564f3e);
+  font-size: 0.68rem;
+}
+
+.online-room-head strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: ui-monospace, monospace;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.online-room-head button {
+  min-width: 3.2rem;
+  min-height: 1.7rem;
+  padding: 0 0.4rem;
+  font-size: 0.68rem;
+}
+
+.online-room-hint {
+  color: var(--seal-2);
+  font-size: 0.66rem;
+}
+
+/* 顶栏右上：状态牌 + 音效开关合成一格 */
+.header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* 音效开关：和网络状态牌同一块木头、同一套浮雕，只放图标 */
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.05rem;
+  height: 2.05rem;
+  flex: none;
+  padding: 0;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--wood);
+  background-image: var(--btn-face);
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(87, 69, 47, 0.32),
+    2px 2px 0 rgba(46, 42, 34, 0.28);
+}
+
+.sound-toggle svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.sound-toggle:hover {
+  color: #1b1811;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: var(--ink-2, #564f3e);
+  opacity: 0.7;
+}
+
+/* ---------- 「牌匾按钮」配方：浅木纹面 + 细深棕木框 + 柔和外阴影 + 极弱内高光 ----------
+   首页那两张牌匾（home.css 的 .tablet）用同一组参数；这里是游戏里那颗「确认弃牌」。
+   覆盖 .btn-plate 的九宫格木框：框收到 1px，厚度改由 padding 给，
+   免得只有边框形状变了、内边距还是按 8px 木框留的。 */
+#confirm-discard {
+  border: 1px solid rgba(75, 58, 39, 0.5);
+  border-image: none;
+  border-radius: 4px;
+  padding: 0.42rem 0.95rem;
+  background-color: #eae2cc;
+  background-image:
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.045) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  background-size: auto, 256px 256px;
+  background-repeat: repeat, repeat;
+  box-shadow:
+    0 2px 7px rgba(46, 42, 34, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  color: var(--ink);
+  transition:
+    transform var(--motion-quick) var(--ease-soft),
+    box-shadow var(--motion-quick) var(--ease-soft),
+    background-color var(--motion-quick) var(--ease-soft);
+}
+
+#confirm-discard:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background-color: #e3d8bd;
+  box-shadow:
+    0 5px 13px rgba(46, 42, 34, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+#confirm-discard:active:not(:disabled) {
+  transform: translateY(1px);
+  background-color: #ddd0b2;
+  box-shadow:
+    0 1px 3px rgba(46, 42, 34, 0.24),
+    inset 0 2px 3px rgba(46, 42, 34, 0.26);
+}
+
+/* 牌数没凑齐时不可点：材质不换，只压暗 */
+#confirm-discard:disabled {
+  background-color: #eae2cc;
+  background-image:
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.045) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  opacity: 0.5;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ---------- 手牌增减：飞牌浮层 + 落到格子上的一下 ----------
+   卡片只动 transform / opacity；起点用 left/top 定一次，之后不再碰，
+   所以不会触发布局。 */
+#hand-fx-layer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hand-fx-card {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 2.15rem;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--paper);
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  box-shadow: 2px 2px 0 rgba(46, 42, 34, 0.3);
+  color: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  transform: translate(-50%, -50%);
+  /* 飞行由 JS 的 Web Animations 驱动（要走一道弧线，CSS transition 做不到）；
+     这里只留起始定位，别再挂 transition，否则两套动画会打架。 */
+  will-change: transform, opacity;
+}
+
+.hand-fx-card.is-outgoing {
+  background-color: #efe3d7;
+}
+
+/* 落到手牌格上：收到时轻轻顶一下，花掉时压一下 */
+.hand-tile.hand-gain {
+  animation: hand-tile-gain var(--motion-rise) var(--ease-soft);
+}
+
+/* 对手收到资源：他那一行从棋盘方向轻轻贴进来 */
+.player-row.player-row-gain {
+  animation: player-row-gain var(--motion-beat) var(--ease-soft);
+}
+
+/* ---------- 交易谈判小票 ----------
+   一笔交易挂在棋盘右上角那片空海上：写着给什么、要什么，每个对象一枚小牌。
+   浮层是 pointer-events: none —— 它只是桌上的纸，不拦棋盘的拖动和缩放。 */
+#trade-slip-layer {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.trade-slip-anchor {
+  position: absolute;
+  /* 锚点给的是右上角，纸朝左铺开 */
+  transform: translate(-100%, 0);
+}
+
+.trade-slip {
+  position: relative;
+  width: 10.4rem;
+  padding: 0.45rem 0.55rem 0.4rem;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background-color: var(--paper-2);
+  background-image: var(--paper-tex);
+  background-size: 256px 256px;
+  box-shadow: 3px 3px 0 rgba(87, 69, 47, 0.28);
+  color: var(--ink);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  will-change: transform, opacity;
+}
+
+/* 流局/取消时划过来的那道斜线：平时 scaleX(0) 藏着 */
+.trade-slip-strike {
+  position: absolute;
+  top: 50%;
+  left: -5%;
+  width: 110%;
+  height: 2px;
+  background: var(--seal);
+  opacity: 0;
+  transform: rotate(-5deg) scaleX(0);
+  transform-origin: left center;
+}
+
+.trade-slip.is-void .trade-slip-strike {
+  animation: trade-slip-strike var(--motion-base) var(--ease-out) forwards;
+}
+
+@keyframes trade-slip-strike {
+  from {
+    opacity: 0.92;
+    transform: rotate(-5deg) scaleX(0);
+  }
+  to {
+    opacity: 0.92;
+    transform: rotate(-5deg) scaleX(1);
+  }
+}
+
+.trade-slip-from {
+  display: block;
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.trade-slip-deal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.18rem;
+  margin: 0.1rem 0 0.3rem;
+  font-weight: 600;
+}
+
+.trade-pool {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.trade-pool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.16rem;
+  white-space: nowrap;
+}
+
+.trade-slip-arrow {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.trade-slip-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+}
+
+.trade-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.04rem 0.3rem;
+  border: 1px dashed rgba(46, 42, 34, 0.45);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+/* 正在被问的那一位：边框收成实线，和"还没轮到"分开 */
+.trade-target.is-current {
+  border-style: solid;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* 盖过戳的两态：接受走 verd，拒绝走 seal，名字划一道 */
+.trade-target.is-accepted {
+  border-style: solid;
+  border-color: var(--verd);
+  background: var(--verd);
+  color: #f2ecda;
+}
+
+.trade-target.is-rejected {
+  border-style: solid;
+  border-color: var(--seal);
+  background: rgba(163, 69, 59, 0.12);
+  color: var(--seal);
+}
+
+.trade-target.is-rejected .trade-target-name {
+  text-decoration: line-through;
+}
+
+.trade-target-mark:empty {
+  display: none;
+}
+
+.trade-slip-note {
+  margin: 0.3rem 0 0;
+  padding-top: 0.26rem;
+  border-top: 1px solid rgba(46, 42, 34, 0.22);
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+/* 盖戳：真盖章是"砸"下去的那一下，所以先过冲再收住 */
+.trade-target.trade-target-stamp {
+  animation: trade-target-stamp var(--motion-stamp) var(--ease-snap);
+}
+
+@keyframes trade-target-stamp {
+  0% {
+    transform: scale(1.45) rotate(-7deg);
+    opacity: 0.25;
+  }
+  60% {
+    transform: scale(0.96) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* 轮到我回应：小票朝「玩家」面板那边偏一下再回来 */
+.trade-slip.trade-slip-ask {
+  animation: trade-slip-ask var(--motion-carry) var(--ease-soft);
+}
+
+@keyframes trade-slip-ask {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+  30% {
+    transform: translateX(16px) rotate(1.2deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+/* ---------- 回合与阶段切换：让"轮到谁 / 走到哪一步"不可能看错 ----------
+   三处轻动效：阶段标换字、当前玩家换人、轮到我暖一下。
+   都是短促的位移 + 透明度/底色，不用投影也不用发光（和整体语言一致）。 */
+#phase.phase-flip,
+.turn-pill.phase-flip strong {
+  animation: phase-settle var(--motion-beat) var(--ease-soft);
+}
+
+@keyframes phase-settle {
+  0% {
+    transform: translateY(-3px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+#current-player.turn-flip {
+  animation: name-settle var(--motion-carry) var(--ease-soft);
+}
+
+@keyframes name-settle {
+  0% {
+    transform: translateX(-4px);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 轮到我了：回合牌底色暖一下、轻轻上浮，不用红色也不加光环 */
+.turn-pill.my-turn {
+  animation: my-turn var(--motion-lift) var(--ease-soft);
+}
+
+@keyframes my-turn {
+  0% {
+    transform: translateY(0);
+    background-color: #e6dfc8;
+  }
+  35% {
+    transform: translateY(-2px);
+    background-color: #efe0d2;
+  }
+  100% {
+    transform: translateY(0);
+    background-color: #e6dfc8;
+  }
+}
+
+/* 当前玩家那一行：脉冲一下，标记牌"搬"过去的动作才看得见 */
+.player-row.player-row-turn {
+  animation: player-row-turn var(--motion-hold) var(--ease-soft);
+}
+
+@keyframes player-row-turn {
+  0% {
+    transform: translateX(-6px);
+    background-color: rgba(240, 228, 206, 0.95);
+  }
+  100% {
+    transform: translateX(0);
+    background-color: var(--paper);
+  }
+}
+
+/* 倒计时进危险区：慢慢呼吸（颜色已经由 .danger 负责，这里只加一点动） */
+.turn-timer.danger {
+  animation: timer-breathe 1.15s ease-in-out infinite;
+}
+
+@keyframes timer-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- 收成：地块上的那层高光 ----------
+   棋盘上额外铺的多边形，只动 opacity：不给地块本身加 filter、也不改它的 fill，
+   那两样在这个 10 单位的 viewBox 下要么被算崩、要么动画结束会跳回原色。 */
+.hex-harvest {
+  fill: #fff6dc;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 整片提示：这一掷碰到的同数字地块一起亮一下 */
+.hex-harvest.harvest-flash {
+  animation: harvest-flash var(--motion-beat) var(--ease-soft);
+}
+
+/* 逐块点亮：真的产出资源的那几块，按产出顺序依次更亮一点 */
+.hex-harvest.harvest-pick {
+  animation: harvest-pick var(--motion-carry) var(--ease-soft);
+}
+
+@keyframes harvest-flash {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.34;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes harvest-pick {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #phase.phase-flip,
+  .turn-pill.phase-flip strong,
+  #current-player.turn-flip,
+  .turn-pill.my-turn,
+  .player-row.player-row-turn,
+  .turn-timer.danger,
+  .hex-harvest.harvest-flash,
+  .hex-harvest.harvest-pick,
+  .trade-target.trade-target-stamp,
+  .trade-slip.trade-slip-ask {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 少动效也要看得见"作废"：直接画出划掉的那道线 */
+  .trade-slip.is-void .trade-slip-strike {
+    animation: none;
+    opacity: 0.92;
+    transform: rotate(-5deg) scaleX(1);
+  }
+}
+
+@keyframes player-row-gain {
+  0% {
+    transform: translateX(-7px);
+    background-color: rgba(232, 226, 208, 0.9);
+  }
+  100% {
+    transform: translateX(0);
+    background-color: rgba(232, 226, 208, 0.55);
+  }
+}
+
+.hand-tile.hand-spend {
+  animation: hand-tile-spend var(--motion-rise) var(--ease-soft);
+}
+
+@keyframes hand-tile-gain {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-3px) scale(1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hand-tile-spend {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-fx-card {
+    display: none;
+  }
+
+  .hand-tile.hand-gain,
+  .hand-tile.hand-spend {
+    animation: none;
+  }
+
+  .player-row.player-row-gain {
+    animation: none;
+  }
+}
+
+.create-room-content {
+  width: min(26rem, 100%);
+}
+
+.create-room-body {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.create-room-body > label {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--ink-2, #564f3e);
+  font-size: 0.66rem;
+}
+
+.create-room-body > .host-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding-top: 0.15rem;
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+
+.create-room-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.create-room-actions button {
+  min-height: 2.5rem;
+  font-weight: 600;
+}
+
+/* 复选框：原生方块和羊皮纸放一起太跳，换成纸面细木框 + 手绘对勾 */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin: 0;
+  border: 1.4px solid var(--ink);
+  border-radius: 3px;
+  background-color: var(--paper);
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--paper-2);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.26rem;
+  top: 0.08rem;
+  width: 0.22rem;
+  height: 0.44rem;
+  border-right: 1.6px solid var(--ink);
+  border-bottom: 1.6px solid var(--ink);
+  transform: rotate(40deg);
+}
+
+/* ---------- 房间面板 / 创建房间弹窗里的按钮 ----------
+   约定：外框 1px 深棕细线（压透明度）、本体浅木纹压羊皮纸；
+   hover 背景加深 + 上浮 2px 带阴影；按下轻微凹陷。
+    这一屏不再用九宫格木框底图（border-image），所以先把 border-image 关掉。
+    规则一句话：**纸面上的按钮用细线，木桌面上的小件才用实墨框**。
+    - 交易弹窗底部那两个原本挂着 .btn-plate，是 8px 九宫格木框，摆进弹窗明显粗一圈；
+    - 弹窗标题栏的「关闭」原本落在全局 button 上（1.4px 实墨线 + 木面色），
+      和创建房间弹窗里同位置的按钮不是一个样。
+    这两处一并收到这里。 */
+#sidebar-room button,
+#create-room-dialog button,
+.trade-dialog-actions button,
+.modal .side-heading button {
+  border: 1px solid rgba(75, 58, 39, 0.4);
+  border-image: none;
+  border-radius: 4px;
+  background-color: #e9e1cb;
+  background-image:
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.05) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  background-size: auto, 256px 256px;
+  background-repeat: repeat, repeat;
+  color: var(--ink);
+  box-shadow: none;
+  transition:
+    background-color var(--motion-quick) var(--ease-soft),
+    transform var(--motion-quick) var(--ease-soft),
+    box-shadow var(--motion-quick) var(--ease-soft);
+}
+
+#sidebar-room button:hover:not(:disabled),
+#create-room-dialog button:hover:not(:disabled),
+.trade-dialog-actions button:hover:not(:disabled),
+.modal .side-heading button:hover:not(:disabled) {
+  background-color: #ded2b4;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 0 rgba(46, 42, 34, 0.28);
+}
+
+#sidebar-room button:active:not(:disabled),
+#create-room-dialog button:active:not(:disabled),
+.trade-dialog-actions button:active:not(:disabled),
+.modal .side-heading button:active:not(:disabled) {
+  background-color: #d6c9a8;
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 3px rgba(46, 42, 34, 0.3);
+}
+
+/* 不可点：底色不动，只脱色压暗，别换一种材质 */
+#sidebar-room button:disabled,
+#create-room-dialog button:disabled,
+.trade-dialog-actions button:disabled,
+.modal .side-heading button:disabled {
+  background-color: #e9e1cb;
+  background-image:
+    repeating-linear-gradient(92deg, rgba(75, 58, 39, 0.05) 0 1px, transparent 1px 7px),
+    var(--paper-tex);
+  opacity: 0.5;
+  box-shadow: none;
+  transform: none;
+}
+
+/* 同一屏的输入框 / 下拉框跟着换成同一根细线，免得只有按钮变细 */
+#sidebar-room input:not([type="checkbox"]),
+#sidebar-room select,
+#create-room-dialog input:not([type="checkbox"]),
+#create-room-dialog select {
+  border: 1px solid rgba(75, 58, 39, 0.4);
+  border-radius: 4px;
+  background-color: var(--paper);
+  transition:
+    border-color var(--motion-quick) var(--ease-soft),
+    box-shadow var(--motion-quick) var(--ease-soft);
+}
+
+/* =========================================================
+   动效统一
+   三件事：把原主题里还是裸值的时长收进刻度；给弹窗、浮层、侧栏换页补一套
+   统一的入场；把"指针反馈"固定在最轻的那一档。
+   出场动画不做：这些面板的关闭路径散在各处业务代码里（Esc、点遮罩、点按钮、
+   棋盘重画时顺手收起），为一段退场去改四五条链路不划算，入场到位就够了。
+   ========================================================= */
+
+/* 1) 原主题那几条动画还写着 320/360/380/420ms，皮肤只覆盖时长，动画本身不动。
+   （骰子不在这里：这版主题把 .dice-display.rolling 的抖动关掉了，
+   点数变化由 JS 的 renderDice 逐帧重画，节奏写在 app.js 的 steps 表里。） */
+.hand-dock.receiving .hand-tile {
+  animation-duration: var(--motion-rise);
+}
+
+.board-stage.board-fx-road .road-color,
+.board-stage.board-fx-build .building-shell,
+.board-stage.board-fx-robber .robber {
+  animation-duration: var(--motion-rise);
+}
+
+/* 2) 弹窗遮罩、提示条：只淡入。
+   这里绝对不能动 transform —— 棋盘提示框的位置是靠行内 transform 每帧挪的，
+   动画一旦插手 transform，鼠标一动它就被拽回原地。 */
+.modal:not(.hidden),
+.completion:not(.hidden),
+.net-toast:not([hidden]),
+.board-tooltip:not([hidden]) {
+  animation: panel-fade var(--motion-base) var(--ease-out);
+}
+
+/* 弹窗里的那张纸：浮上来一点，别从零放大，不然像贴纸弹出来 */
+.modal:not(.hidden) .modal-content {
+  animation: panel-rise var(--motion-base) var(--ease-out);
+}
+
+/* 落子确认牌用自己的定位（-50%/-100%），所以这一版把基准 transform 写全 */
+.placement-confirm:not(.hidden) {
+  animation: panel-rise-centred var(--motion-base) var(--ease-out);
+}
+
+/* 3) 侧栏里成组出现的控件（弃牌、偷牌、发展卡、交易）：跟着淡入 */
+.special-controls:not(.hidden) {
+  animation: panel-fade var(--motion-base) var(--ease-out);
+}
+
+/* 4) 侧栏换页：新面板淡入，并从页签方向贴进来 */
+.side-view:not(.hidden) {
+  animation: panel-slide var(--motion-base) var(--ease-out);
+}
+
+@keyframes panel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes panel-rise-centred {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 6px)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+}
+
+@keyframes panel-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal:not(.hidden),
+  .completion:not(.hidden),
+  .net-toast:not([hidden]),
+  .board-tooltip:not([hidden]),
+  .modal:not(.hidden) .modal-content,
+  .placement-confirm:not(.hidden),
+  .special-controls:not(.hidden),
+  .side-view:not(.hidden) {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 少动效就别让海面飘了 */
+  .board-stage::before {
+    animation: none;
+  }
+}
+
+/* =========================================================
+   侧栏改版：玩家与行动合成一栏，发起交易改成弹窗
+   ========================================================= */
+
+/* 对局面板：玩家在上、行动在下，中间一条发丝缝。
+   整块共用 .side-view 自己的滚动条，不另起嵌套滚动区。 */
+.table-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* 面板是 flex 列，子项默认会被压扁；.players 又正好是 overflow: hidden，
+   四个人就会被裁掉后两行。禁止压缩，让它溢出到面板自己的滚动条上。 */
+.table-panel > * {
+  flex: none;
+}
+
+.table-panel .action-heading {
+  margin-top: 0.1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(46, 42, 34, 0.22);
+}
+
+/* 行动区里的控件纵向排开，别各自缩成一团 */
+.table-panel .special-controls {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.table-panel .empty-state {
+  margin: 0;
+}
+
+/* 两个交易入口并排一行，省下一行的高度：四个人在场时侧栏本来就不宽裕 */
+.trade-actions-row {
+  grid-column: 1 / 3;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.trade-actions-row button {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.trade-dialog-content {
+  width: min(34rem, 100%);
+}
+
+.trade-dialog-hint {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+/* 弹窗比侧栏宽得多：两行筹码可以铺开，不用挤在窄栏里。
+   这里必须显式给一列 minmax(0, 1fr)：.trade-builder 是 grid，
+   auto 轨道会按 max-content 撑开，五个筹码一挤就整行溢出到纸外。 */
+.trade-dialog-content .trade-builder {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.trade-dialog-content .trade-builder-row {
+  min-width: 0;
+}
+
+.trade-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}

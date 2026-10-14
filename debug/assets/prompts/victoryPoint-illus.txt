@@ -1,0 +1,16 @@
+Hand-drawn ink and pale watercolour illustration for a board game, in the manner of a
+19th-century nautical chart or copper-plate book engraving.
+
+Style: fine dark ink outlines (near #2E2A22) with hatching and stipple for shadow instead of
+gradients. Muted Morandi earth palette only: grey-teal #8CA29C, oak #AE8C63, moss green #6E8570,
+clay #B0846A, wheat #C7B776, sand #D7CEB2, over aged parchment #E8E2D0. Very low contrast, flat
+even daylight, no dramatic backlight, no sunset.
+
+Composition: subject fully inside the frame with about 8% margin on all sides, no drawn border,
+no vignette.
+
+Constraints: no photorealism, no dark moody or gloomy lighting, no high-contrast gradient, no 3D
+render, no glossy digital painting, no cartoon or chibi style, no thick cartoon outlines with
+white highlights, no text, no lettering, no numbers, no signature, no watermark.
+
+Subject: a large wax seal pressed onto a sheet of parchment, a star shape embossed into the wax, a ribbon tail hanging below it, faint ruled ledger lines behind. This one is deliberately not a landscape.
